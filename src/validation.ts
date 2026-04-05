@@ -1,6 +1,7 @@
 import { LIMITS, PAGE_HEIGHT_PX } from "./constants";
 import { countSkillBars, countTags } from "./model";
 import type { CvData, ValidationIssue, ValidationResult } from "./types";
+import { formatLineMessage } from "./validationShared";
 
 const getLineHeight = (element: HTMLElement): number => {
   const computed = window.getComputedStyle(element);
@@ -40,25 +41,6 @@ const countRenderedLines = (element: HTMLElement): number => {
 
   const lineHeight = getLineHeight(element);
   return Math.max(1, Math.round(element.scrollHeight / lineHeight));
-};
-
-const truncate = (value: string, maxLength = 42): string => {
-  if (value.length <= maxLength) {
-    return value;
-  }
-
-  return `${value.slice(0, maxLength - 1).trimEnd()}...`;
-};
-
-const formatLineMessage = (label: string, maxLines: number, rawText: string): string => {
-  const lineWord = maxLines > 1 ? "lignes" : "ligne";
-  const text = truncate(rawText.trim().replace(/\s+/g, " "));
-
-  if (!text) {
-    return `${label} depasse ${maxLines} ${lineWord}.`;
-  }
-
-  return `${label} "${text}" depasse ${maxLines} ${lineWord}.`;
 };
 
 export const collectStructureMessages = (state: CvData): string[] => {

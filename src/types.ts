@@ -6,7 +6,6 @@ export type CvTheme =
   | "zen"
   | "zen-cream"
   | "zen-orange"
-  | "zen-sunset"
   | "claude"
   | "graphite"
   | "cyber"

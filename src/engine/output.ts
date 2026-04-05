@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -22,4 +22,14 @@ export const writeBinaryArtifactToTempFile = async (
   const targetPath = path.join(directory, `${baseName}-${Date.now()}${extension}`);
   await writeFile(targetPath, content);
   return targetPath;
+};
+
+export const createTempWorkspace = async (prefix: string): Promise<string> => {
+  const directory = await ensureOutputDirectory();
+  const normalizedPrefix = sanitizeFileName(prefix) || "workspace";
+  return mkdtemp(path.join(directory, `${normalizedPrefix}-`));
+};
+
+export const removeTempWorkspace = async (workspacePath: string): Promise<void> => {
+  await rm(workspacePath, { recursive: true, force: true });
 };

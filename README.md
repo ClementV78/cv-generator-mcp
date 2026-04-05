@@ -54,7 +54,7 @@ Important :
 
 - Node.js
 - dependances npm installees
-- Chrome / Edge local pour le rendu PDF headless
+- aucun chemin de navigateur systeme a fournir dans le flux MCP normal
 
 ## Installation
 
@@ -240,10 +240,18 @@ Genere le HTML final du CV sans chrome d'edition.
 
 ### `generate_cv_pdf`
 
-Genere un PDF via Playwright avec :
+Genere un PDF via `Vivliostyle` a partir du HTML/CSS du template :
 
 - `pdf_mode: "paginated"` pour un CV classique
 - `pdf_mode: "continuous"` pour un export monobloc plus oriente lecture ecran
+
+Notes utiles :
+
+- le backend PDF principal est `@vivliostyle/cli`
+- le rendu est donc beaucoup plus proche du HTML/CSS source que l'ancien PDF reconstruit a la main
+- le tool MCP ne demande pas de chemin de navigateur systeme dans le cas nominal
+- le premier rendu PDF peut etre plus lent, le temps que le runtime headless soit pret
+- le choix de ce backend implique aussi de surveiller sa licence et son impact de distribution
 
 ## Comportement en cas de depassement de pages
 
@@ -292,3 +300,8 @@ Ce n'est pas encore :
 ## Licence
 
 MIT
+
+Note :
+
+- le projet est sous licence `MIT`
+- certaines dependances peuvent avoir leur propre licence ; en particulier, le backend PDF actuel `@vivliostyle/cli` doit etre verifie avant une publication communautaire plus large

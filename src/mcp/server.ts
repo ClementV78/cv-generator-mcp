@@ -10,7 +10,6 @@ import { PdfRenderError } from "../engine/renderPdf";
 
 const cvDataInputSchema = z.object({
   cv_data: z.unknown(),
-  browser_executable_path: z.string().optional(),
 });
 
 const pdfToolInputSchema = cvDataInputSchema.extend({
@@ -74,12 +73,9 @@ export const createCvMcpServer = (): McpServer => {
         openWorldHint: false,
       },
     },
-    async ({ cv_data, browser_executable_path }) => {
+    async ({ cv_data }) => {
       try {
-        const validation = await validateCvInput(cv_data, {
-          browserExecutablePath: browser_executable_path,
-          measureRender: true,
-        });
+        const validation = await validateCvInput(cv_data, { measureRender: true });
 
         if (validation.pageLimitExceeded) {
           return createErrorResponse("Le rendu depasse la limite de pages fixee.", "page_limit_exceeded", {
@@ -129,12 +125,12 @@ export const createCvMcpServer = (): McpServer => {
         openWorldHint: false,
       },
     },
-    async ({ cv_data, browser_executable_path, pdf_mode }) => {
+    async ({ cv_data, pdf_mode }) => {
       try {
         const resolvedPdfMode = pdf_mode ?? "paginated";
         const validation = await validateCvInput(cv_data, {
-          browserExecutablePath: browser_executable_path,
           measureRender: true,
+          pdfMode: resolvedPdfMode,
         });
 
         if (resolvedPdfMode === "paginated" && validation.pageLimitExceeded) {
@@ -149,7 +145,6 @@ export const createCvMcpServer = (): McpServer => {
         const artifact = await generateCvArtifact(validation.cvData, {
           format: "pdf",
           pdfOptions: {
-            browserExecutablePath: browser_executable_path,
             mode: resolvedPdfMode,
           },
         });
@@ -194,12 +189,9 @@ export const createCvMcpServer = (): McpServer => {
         openWorldHint: false,
       },
     },
-    async ({ cv_data, browser_executable_path }) => {
+    async ({ cv_data }) => {
       try {
-        const validation = await validateCvInput(cv_data, {
-          browserExecutablePath: browser_executable_path,
-          measureRender: true,
-        });
+        const validation = await validateCvInput(cv_data, { measureRender: true });
 
         return createSuccessResponse("Validation du CV terminee.", {
           page_count: validation.pageCount,

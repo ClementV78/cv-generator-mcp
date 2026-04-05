@@ -414,8 +414,8 @@ export const renderApp = (state: CvData, options: RenderOptions): string => {
   const sidebarToggleArrow = state.render.sidebarPosition === "right" ? "&larr;" : "&rarr;";
   const sidebarToggleTitle =
     state.render.sidebarPosition === "right"
-      ? "Remettre la colonne à gauche"
-      : "Déplacer la colonne à droite";
+      ? "Remettre la colonne ? gauche"
+      : "D?placer la colonne ? droite";
   const canAddSkillGroups = canAddFactory(state, "skillGroups", "skill-bar-group");
 
   return `
@@ -457,7 +457,7 @@ export const renderApp = (state: CvData, options: RenderOptions): string => {
               <option value="ocean" ${state.render.theme === "ocean" ? "selected" : ""}>Ocean DevOps</option>
               <option value="zen" ${state.render.theme === "zen" ? "selected" : ""}>Zen</option>
               <option value="zen-cream" ${state.render.theme === "zen-cream" ? "selected" : ""}>Zen Crème</option>
-              <option value="zen-orange" ${state.render.theme === "zen-orange" || state.render.theme === "zen-sunset" ? "selected" : ""}>Zen Ambre</option>
+              <option value="zen-orange" ${state.render.theme === "zen-orange" ? "selected" : ""}>Zen Ambre</option>
               <option value="claude" ${state.render.theme === "claude" ? "selected" : ""}>Claude Code</option>
               <option value="graphite" ${state.render.theme === "graphite" ? "selected" : ""}>Graphite</option>
               <option value="cyber" ${state.render.theme === "cyber" ? "selected" : ""}>Cyber Blue</option>
@@ -500,8 +500,8 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
   const sidebarToggleArrow = state.render.sidebarPosition === "right" ? "&larr;" : "&rarr;";
   const sidebarToggleTitle =
     state.render.sidebarPosition === "right"
-      ? "Remettre la colonne Ã  gauche"
-      : "DÃ©placer la colonne Ã  droite";
+      ? "Remettre la colonne à gauche"
+      : "Déplacer la colonne à droite";
   const canAddSkillGroups = canAddFactory(state, "skillGroups", "skill-bar-group");
 
   return `

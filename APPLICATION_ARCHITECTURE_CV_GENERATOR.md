@@ -81,6 +81,7 @@ CV_Generator/
       service.ts
       validateNode.ts
       validationBrowser.ts
+      vivliostyle.ts
     mcp/
       server.ts
   scripts/
@@ -258,7 +259,7 @@ classDiagram
 Le projet contient 2 types de validation :
 
 1. validation navigateur
-2. validation Node/headless
+2. validation Node embarquee
 
 ## Validation Navigateur
 
@@ -282,7 +283,7 @@ Fichier :
 Usage :
 
 - validation utilisable hors UI
-- mesure headless via Playwright
+- estimation de pagination sans navigateur externe
 - production de `pageCount`, `issues`, `structureMessages`
 
 ## Flux De Validation
@@ -336,11 +337,12 @@ flowchart TD
 
     D --> G[renderHtmlNode.ts]
     E --> H[renderPdf.ts]
-    H --> I[Playwright]
-    D --> J[qr.ts]
+    H --> I[vivliostyle.ts]
+    H --> J[pdfLayout.ts]
+    D --> K[qr.ts]
 
     classDef eng fill:#EBF8EF,stroke:#3DA35D,color:#183D22,stroke-width:2px;
-    class A,B,C,D,E,F,G,H,I,J eng;
+    class A,B,C,D,E,F,G,H,I,J,K eng;
 ```
 
 ### `service.ts`
@@ -374,12 +376,32 @@ Usage :
 
 ### `renderPdf.ts`
 
-Renderer PDF headless via `playwright-core`.
+Facade PDF headless, basee sur `Vivliostyle`.
 
 Supporte :
 
 - `mode: "paginated"`
 - `mode: "continuous"`
+
+### `pdfLayout.ts`
+
+Moteur d'estimation de pagination et de mesures de rendu.
+
+Responsabilites :
+
+- calcul de pagination
+- estimation des depassements de lignes critiques
+
+### `vivliostyle.ts`
+
+Adaptateur HTML/CSS vers PDF.
+
+Responsabilites :
+
+- ecriture d'un HTML temporaire autonome
+- appel a `@vivliostyle/cli`
+- generation du PDF final
+- prise en charge du mode `continuous` avec taille de page calculee
 
 ### `schema.ts`
 
@@ -408,7 +430,6 @@ Exemples :
 - `cv_data.render.sidebarPosition`
 - `cv_data.render.maxPages`
 - `generate_cv_pdf.pdf_mode`
-- `generate_cv_* .browser_executable_path`
 
 Important :
 
@@ -434,10 +455,11 @@ flowchart LR
     C -->|json| D[exportCvJson]
     C -->|html| E[renderCvHtmlDocumentNode]
     C -->|pdf| F[renderCvPdf]
-    F --> G[Playwright PDF]
+    F --> G[Vivliostyle]
+    F --> H[pdfLayout - estimation]
 
     classDef flow fill:#EBF8EF,stroke:#3DA35D,color:#183D22,stroke-width:2px;
-    class A,B,C,D,E,F,G flow;
+    class A,B,C,D,E,F,G,H flow;
 ```
 
 ### PDF - Mode `paginated`
@@ -445,17 +467,16 @@ flowchart LR
 Comportement :
 
 - A4
-- marges fixes
-- fonds imprimes
-- pagination classique
+- pagination CSS/HTML via `Vivliostyle`
+- rendu visuellement aligne sur le template HTML source
 
 ### PDF - Mode `continuous`
 
 Comportement :
 
 - une seule grande page PDF
-- hauteur calculee selon le contenu
-- pas de coupure visuelle entre pages
+- hauteur calculee selon le contenu estime
+- rendu genere par `Vivliostyle` avec taille de page personnalisee
 
 ## Regles de pagination
 
@@ -581,9 +602,9 @@ Verifier :
 ### PDF
 
 - generation PDF valide
-- mode pagine
-- mode continu
-- erreur structurée si navigateur absent
+- mode pagine via `Vivliostyle`
+- mode continu via `Vivliostyle`
+- aucun chemin de navigateur systeme a fournir dans le flux MCP normal
 
 ### MCP
 
@@ -621,6 +642,7 @@ En particulier :
 
 - pas de `playwright-core` dans le bundle web
 - pas de `fs` / `node:*` dans l'UI
+- pas d'import `@vivliostyle/cli` dans le bundle web
 
 ---
 

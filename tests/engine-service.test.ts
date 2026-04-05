@@ -19,6 +19,7 @@ test("getCvSchema exposes the expected render contract", () => {
   assert.equal(schema.title, "CvData");
   assert.deepEqual(schema.properties.render.properties.sidebarPosition.enum, ["left", "right"]);
   assert(schema.properties.render.properties.theme.enum.includes("ocean"));
+  assert.equal(schema.properties.render.properties.theme.enum.includes("zen-sunset"), false);
 });
 
 test("validateCvInput normalizes the fixture and returns structure messages", async () => {

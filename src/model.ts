@@ -31,20 +31,22 @@ const asArray = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[
 const asNumber = (value: unknown, fallback = 0): number =>
   typeof value === "number" && Number.isFinite(value) ? value : fallback;
 
-const asTheme = (value: unknown, fallback: CvTheme = "ocean"): CvTheme =>
-  value === "zen" ||
-  value === "zen-cream" ||
-  value === "zen-orange" ||
-  value === "zen-sunset" ||
-  value === "claude" ||
-  value === "graphite" ||
-  value === "cyber" ||
-  value === "cyber-purple" ||
-  value === "ocean"
-    ? value === "zen-sunset"
-      ? "zen-orange"
-      : value
+const asTheme = (value: unknown, fallback: CvTheme = "ocean"): CvTheme => {
+  if (value === "zen-sunset") {
+    return "zen-orange";
+  }
+
+  return value === "zen" ||
+    value === "zen-cream" ||
+    value === "zen-orange" ||
+    value === "claude" ||
+    value === "graphite" ||
+    value === "cyber" ||
+    value === "cyber-purple" ||
+    value === "ocean"
+    ? value
     : fallback;
+};
 
 const asSidebarPosition = (value: unknown, fallback: SidebarPosition = "left"): SidebarPosition =>
   value === "right" ? "right" : fallback;
