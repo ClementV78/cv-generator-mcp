@@ -1,0 +1,97 @@
+{
+  "header": {
+    "name": "Sonia Respire",
+    "badgeText": "S.R",
+    "headline": "SOPHROLOGUE | FORMATRICE EN SOPHROLOGIE | ACCOMPAGNEMENT",
+    "location": "Nantes, France",
+    "email": "sonia.respire@example.com",
+    "linkedin": "linkedin.com/in/sonia-respire",
+    "availabilityText": "Disponible pour des accompagnements individuels, ateliers collectifs et formations en sophrologie",
+    "qrCodeLabel": "Version web",
+    "qrCodeUrl": "https://example.com/sophrologue-formatrice",
+    "showQrCode": true
+  },
+  "profileLabel": "Profil professionnel",
+  "profile": "Sophrologue et formatrice en sophrologie, avec experience en accompagnement individuel, animation d'ateliers collectifs et conception de parcours pedagogiques autour de la gestion du stress, de la regulation emotionnelle et de la qualite de vie au travail.",
+  "skillGroups": [
+    {
+      "id": "sg-acc",
+      "title": "Accompagnement & animation",
+      "type": "bars",
+      "items": [
+        { "id": "acc", "label": "Accompagnement individuel", "level": 88 },
+        { "id": "grp", "label": "Animation de groupes", "level": 84 },
+        { "id": "parc", "label": "Conception de parcours", "level": 82 },
+        { "id": "ped", "label": "Pedagogie", "level": 85 }
+      ]
+    },
+    {
+      "id": "sg-tools",
+      "title": "Outils & cadres d'intervention",
+      "type": "tags",
+      "items": [
+        { "id": "s1", "label": "Sophrologie" },
+        { "id": "s2", "label": "Relaxation dynamique" },
+        { "id": "s3", "label": "QVT" },
+        { "id": "s4", "label": "Ateliers collectifs" },
+        { "id": "s5", "label": "Formation" },
+        { "id": "s6", "label": "Prevention du stress" }
+      ]
+    }
+  ],
+  "highlights": [
+    { "id": "h1", "text": "Accompagnements individuels et ateliers collectifs." },
+    { "id": "h2", "text": "Formation en sophrologie et transmission de pratiques." }
+  ],
+  "certifications": [
+    { "id": "c1", "icon": "certification", "title": "Certification de sophrologue", "subtitle": "2024" }
+  ],
+  "formations": [
+    { "id": "f1", "icon": "formation", "title": "Formation de sophrologue", "subtitle": "2024", "meta": "Pratique professionnelle" },
+    { "id": "f2", "icon": "formation", "title": "Formation de formateur", "subtitle": "2022", "meta": "Pedagogie & animation" }
+  ],
+  "languages": [
+    { "id": "l1", "title": "Francais", "subtitle": "langue maternelle" },
+    { "id": "l2", "title": "Anglais", "subtitle": "niveau conversationnel" }
+  ],
+  "experiences": [
+    {
+      "id": "e1",
+      "company": "Cabinet Equilibre",
+      "role": "Sophrologue & formatrice",
+      "period": "2023 - 2026",
+      "subtitle": "Accompagnements, ateliers et formations",
+      "bullets": [
+        { "id": "b1", "text": "Animation de seances individuelles et de cycles d'accompagnement autour du stress, du sommeil et de la confiance en soi." },
+        { "id": "b2", "text": "Conception et animation d'ateliers collectifs en entreprise et en structure associative." },
+        { "id": "b3", "text": "Creation de supports et de parcours de formation en sophrologie pour des publics debutants." }
+      ],
+      "techEnvironmentLabel": "Cadre d'intervention",
+      "techEnvironment": "Sophrologie, ateliers collectifs, accompagnement individuel, formation, QVT",
+      "projects": [
+        {
+          "id": "p1",
+          "title": "Programme gestion du stress en entreprise",
+          "period": "2024 - 2026",
+          "bullets": [
+            { "id": "pb1", "text": "Construction d'un cycle de plusieurs ateliers autour de la respiration, de la recuperation et de la concentration." },
+            { "id": "pb2", "text": "Animation de sessions collectives et ajustement des exercices selon les retours terrain." }
+          ],
+          "techEnvironmentLabel": "Cadre d'intervention",
+          "techEnvironment": "Ateliers collectifs, sophrologie, prevention du stress"
+        }
+      ]
+    }
+  ],
+  "mainEducation": {
+    "enabled": true,
+    "title": "Formation",
+    "summary": "Formation de sophrologue completee par une formation de formateur, avec pratique d'animation, construction de supports et adaptation pedagogique selon les publics."
+  },
+  "render": {
+    "mode": "preview",
+    "maxPages": 2,
+    "theme": "zen",
+    "sidebarPosition": "left"
+  }
+}

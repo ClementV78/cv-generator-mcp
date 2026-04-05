@@ -1,0 +1,97 @@
+{
+  "header": {
+    "name": "Jules Spring",
+    "badgeText": "J.S",
+    "headline": "DEVELOPPEUR JAVA | SPRING | BACKEND | API",
+    "location": "Lille, France",
+    "email": "jules.spring@example.com",
+    "linkedin": "linkedin.com/in/jules-spring",
+    "availabilityText": "Disponible pour des missions de developpement backend Java",
+    "qrCodeLabel": "Version web",
+    "qrCodeUrl": "https://example.com/java-developer",
+    "showQrCode": true
+  },
+  "profileLabel": "Profil professionnel",
+  "profile": "Developpeur Java backend avec experience en conception technique, APIs, microservices et maintenance evolutive. Habitude des contextes produit, de la qualite logicielle et du travail en equipe agile.",
+  "skillGroups": [
+    {
+      "id": "sg-back",
+      "title": "Developpement backend",
+      "type": "bars",
+      "items": [
+        { "id": "java", "label": "Java", "level": 92 },
+        { "id": "spring", "label": "Spring Boot", "level": 88 },
+        { "id": "api", "label": "Conception d'API", "level": 84 },
+        { "id": "tests", "label": "Tests automatises", "level": 81 },
+        { "id": "sql", "label": "SQL / modelisation", "level": 78 }
+      ]
+    },
+    {
+      "id": "sg-tools",
+      "title": "Langages & Outils",
+      "type": "tags",
+      "items": [
+        { "id": "java", "label": "Java" },
+        { "id": "spring", "label": "Spring Boot" },
+        { "id": "junit", "label": "JUnit" },
+        { "id": "postgres", "label": "PostgreSQL" },
+        { "id": "maven", "label": "Maven" },
+        { "id": "docker", "label": "Docker" }
+      ]
+    }
+  ],
+  "highlights": [
+    { "id": "h1", "text": "Developpement backend Java et APIs." },
+    { "id": "h2", "text": "Conception technique et qualite logicielle." }
+  ],
+  "certifications": [
+    { "id": "c1", "icon": "certification", "title": "Oracle Java SE", "subtitle": "2023" }
+  ],
+  "formations": [
+    { "id": "f1", "icon": "formation", "title": "Master Genie Logiciel", "subtitle": "2017", "meta": "Developpement logiciel" }
+  ],
+  "languages": [
+    { "id": "l1", "title": "Francais", "subtitle": "langue maternelle" },
+    { "id": "l2", "title": "Anglais", "subtitle": "lu, ecrit, parle" }
+  ],
+  "experiences": [
+    {
+      "id": "e1",
+      "company": "Atlas Payments",
+      "role": "Developpeur Java / Spring",
+      "period": "2022 - 2026",
+      "subtitle": "Plateforme de services de paiement",
+      "bullets": [
+        { "id": "b1", "text": "Developpement de services backend Java / Spring Boot exposes via APIs REST." },
+        { "id": "b2", "text": "Prise en charge de correctifs, evolutions et ameliorations de performance." },
+        { "id": "b3", "text": "Ajout de tests automatises et participation a l'amelioration du delivery." }
+      ],
+      "techEnvironmentLabel": "Environnement technique",
+      "techEnvironment": "Java, Spring Boot, PostgreSQL, Kafka, Docker, GitLab CI",
+      "projects": [
+        {
+          "id": "p1",
+          "title": "API de gestion des flux de paiement",
+          "period": "2024 - 2026",
+          "bullets": [
+            { "id": "pb1", "text": "Conception et evolution d'API REST backend avec exigences de performance." },
+            { "id": "pb2", "text": "Ajout de tests d'integration et fiabilisation des traitements asynchrones." }
+          ],
+          "techEnvironmentLabel": "Environnement technique",
+          "techEnvironment": "Java, Spring Boot, PostgreSQL, Kafka"
+        }
+      ]
+    }
+  ],
+  "mainEducation": {
+    "enabled": true,
+    "title": "Formation",
+    "summary": "Master genie logiciel, bases solides en algorithmique, modelisation, developpement Java et bases de donnees."
+  },
+  "render": {
+    "mode": "preview",
+    "maxPages": 2,
+    "theme": "claude",
+    "sidebarPosition": "left"
+  }
+}

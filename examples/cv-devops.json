@@ -1,0 +1,100 @@
+{
+  "header": {
+    "name": "Diane Ops",
+    "badgeText": "D.O",
+    "headline": "DEVOPS ENGINEER | CLOUD PLATFORM | AUTOMATION",
+    "location": "Paris, France",
+    "email": "diane.ops@example.com",
+    "linkedin": "linkedin.com/in/diane-ops",
+    "availabilityText": "Disponible pour des missions DevOps, plateforme et automatisation",
+    "qrCodeLabel": "Version web",
+    "qrCodeUrl": "https://example.com/devops",
+    "showQrCode": true
+  },
+  "profileLabel": "Profil professionnel",
+  "profile": "Ingenieur DevOps avec experience sur l'automatisation des plateformes, l'industrialisation CI/CD, la conteneurisation, l'observabilite et l'exploitation de services Cloud en environnement produit.",
+  "skillGroups": [
+    {
+      "id": "sg-cloud-platform",
+      "title": "Cloud & Plateforme",
+      "type": "bars",
+      "items": [
+        { "id": "aws", "label": "AWS", "level": 78 },
+        { "id": "k8s", "label": "Kubernetes / EKS / k3s", "level": 74 },
+        { "id": "platform", "label": "Architecture de plateforme", "level": 80 },
+        { "id": "terraform", "label": "Terraform / IaC", "level": 81 },
+        { "id": "cicd", "label": "CI/CD", "level": 86 },
+        { "id": "obs", "label": "Observabilite", "level": 73 }
+      ]
+    },
+    {
+      "id": "sg-tools",
+      "title": "Langages & Outils",
+      "type": "tags",
+      "items": [
+        { "id": "terraform", "label": "Terraform" },
+        { "id": "gha", "label": "GitHub Actions" },
+        { "id": "docker", "label": "Docker" },
+        { "id": "kubernetes", "label": "Kubernetes" },
+        { "id": "prometheus", "label": "Prometheus" },
+        { "id": "grafana", "label": "Grafana" },
+        { "id": "python", "label": "Python" }
+      ]
+    }
+  ],
+  "highlights": [
+    { "id": "h1", "text": "Automatisation et industrialisation des plateformes." },
+    { "id": "h2", "text": "CI/CD, IaC et observabilite." }
+  ],
+  "certifications": [
+    { "id": "c1", "icon": "certification", "title": "AWS Solutions Architect Associate", "subtitle": "2025" },
+    { "id": "c2", "icon": "certification", "title": "KCNA", "subtitle": "2025" }
+  ],
+  "formations": [
+    { "id": "f1", "icon": "formation", "title": "Bootcamp DevOps", "subtitle": "2024", "meta": "Cloud, IaC, CI/CD" }
+  ],
+  "languages": [
+    { "id": "l1", "title": "Francais", "subtitle": "langue maternelle" },
+    { "id": "l2", "title": "Anglais", "subtitle": "courant professionnel" }
+  ],
+  "experiences": [
+    {
+      "id": "e1",
+      "company": "Northstar Mobility",
+      "role": "DevOps Engineer",
+      "period": "2023 - 2026",
+      "subtitle": "Plateforme de services connectes",
+      "bullets": [
+        { "id": "b1", "text": "Mise en place et evolution des pipelines CI/CD et de l'IaC de la plateforme." },
+        { "id": "b2", "text": "Support des equipes applicatives sur les deploiements, la conteneurisation et l'observabilite." },
+        { "id": "b3", "text": "Participation a la fiabilisation de l'exploitation et a la reduction du temps de livraison." }
+      ],
+      "techEnvironmentLabel": "Environnement technique",
+      "techEnvironment": "AWS, Terraform, Kubernetes, Docker, GitHub Actions, Prometheus, Grafana",
+      "projects": [
+        {
+          "id": "p1",
+          "title": "Socle CI/CD mutualise",
+          "period": "2024 - 2026",
+          "bullets": [
+            { "id": "pb1", "text": "Creation de pipelines templates reutilisables pour plusieurs equipes applicatives." },
+            { "id": "pb2", "text": "Ajout de controles qualite et d'etapes de deploiement standardisees." }
+          ],
+          "techEnvironmentLabel": "Environnement technique",
+          "techEnvironment": "GitHub Actions, Docker, Terraform, Kubernetes"
+        }
+      ]
+    }
+  ],
+  "mainEducation": {
+    "enabled": true,
+    "title": "Formation",
+    "summary": "Formation continue orientee DevOps, Cloud, automatisation, exploitation et outillage plateforme."
+  },
+  "render": {
+    "mode": "preview",
+    "maxPages": 2,
+    "theme": "ocean",
+    "sidebarPosition": "left"
+  }
+}

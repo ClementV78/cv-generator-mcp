@@ -1,0 +1,33 @@
+{
+  "header": {
+    "name": "Alex Martin",
+    "badgeText": "A.M",
+    "headline": "DEVOPS | CLOUD | AUTOMATION",
+    "location": "Paris, France",
+    "email": "alex.martin@example.com",
+    "linkedin": "linkedin.com/in/alex-martin",
+    "availabilityText": "Disponible pour des missions DevOps et Cloud",
+    "qrCodeLabel": "Version web",
+    "qrCodeUrl": "https://example.com/cv/alex-martin",
+    "showQrCode": true
+  },
+  "profileLabel": "Profil professionnel",
+  "profile": "Ingenieur DevOps avec experience en automatisation, CI/CD et cloud public.",
+  "skillGroups": [],
+  "highlights": [],
+  "certifications": [],
+  "formations": [],
+  "languages": [],
+  "experiences": [],
+  "mainEducation": {
+    "enabled": true,
+    "title": "Formation",
+    "summary": "Master Informatique."
+  },
+  "render": {
+    "mode": "preview",
+    "maxPages": 2,
+    "theme": "ocean",
+    "sidebarPosition": "left"
+  }
+}
