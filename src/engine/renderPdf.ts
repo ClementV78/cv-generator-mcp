@@ -1,3 +1,5 @@
+import { access } from "node:fs/promises";
+import process from "node:process";
 import type { CvData } from "../types";
 import { measureCvLayout, type PdfMode } from "./pdfLayout";
 import { renderCvHtmlDocumentNode } from "./renderHtmlNode";
@@ -35,6 +37,36 @@ const DEFAULT_PDF_OPTIONS: Required<RenderPdfOptions> = {
   timeoutMs: 120_000,
 };
 
+const WINDOWS_CHROMIUM_PATHS = [
+  "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+  "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+  "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  "C:\\Program Files\\Chromium\\Application\\chrome.exe",
+  "C:\\Program Files (x86)\\Chromium\\Application\\chrome.exe",
+];
+
+const LINUX_CHROMIUM_PATHS = [
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+  "/snap/bin/chromium",
+];
+
+const MAC_CHROMIUM_PATHS = [
+  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "/Applications/Chromium.app/Contents/MacOS/Chromium",
+  "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+];
+
+const BROWSER_ENV_KEYS = [
+  "CV_BROWSER_EXECUTABLE_PATH",
+  "BROWSER_EXECUTABLE_PATH",
+  "PUPPETEER_EXECUTABLE_PATH",
+  "CHROME_PATH",
+] as const;
+
 export class PdfRenderError extends Error {
   readonly code: string;
   cause?: unknown;
@@ -57,12 +89,57 @@ export const resolvePdfOptions = (options: RenderPdfOptions = {}): Required<Rend
   timeoutMs: options.timeoutMs ?? DEFAULT_PDF_OPTIONS.timeoutMs,
 });
 
+const hasAccess = async (filePath: string): Promise<boolean> => {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const resolveBrowserExecutablePath = async (
+  preferredPath?: string,
+): Promise<string | undefined> => {
+  const fromEnvironment = BROWSER_ENV_KEYS.map((key) => process.env[key]).find(
+    (value): value is string => Boolean(value && value.trim()),
+  );
+
+  const platformCandidates =
+    process.platform === "win32"
+      ? WINDOWS_CHROMIUM_PATHS
+      : process.platform === "darwin"
+        ? MAC_CHROMIUM_PATHS
+        : LINUX_CHROMIUM_PATHS;
+
+  const candidates = [preferredPath, fromEnvironment, ...platformCandidates]
+    .filter((value): value is string => Boolean(value && value.trim()))
+    .map((value) => value.trim());
+
+  const seen = new Set<string>();
+
+  for (const candidate of candidates) {
+    if (seen.has(candidate)) {
+      continue;
+    }
+
+    seen.add(candidate);
+
+    if (await hasAccess(candidate)) {
+      return candidate;
+    }
+  }
+
+  return undefined;
+};
+
 export const renderCvPdfFromHtml = async (
   html: string,
   options: RenderPdfOptions = {},
 ): Promise<Uint8Array> => {
   try {
     const resolvedOptions = resolvePdfOptions(options);
+    const executablePath = await resolveBrowserExecutablePath(resolvedOptions.browserExecutablePath);
 
     if (resolvedOptions.mode === "continuous") {
       throw new PdfRenderError(
@@ -76,7 +153,7 @@ export const renderCvPdfFromHtml = async (
       mode: resolvedOptions.mode,
       outputFormat: resolvedOptions.format,
       timeoutMs: resolvedOptions.timeoutMs,
-      browserExecutablePath: resolvedOptions.browserExecutablePath,
+      browserExecutablePath: executablePath,
     });
   } catch (error) {
     if (error instanceof PdfRenderError) {
@@ -99,6 +176,7 @@ export const renderCvPdf = async (
 ): Promise<Uint8Array> => {
   try {
     const resolvedOptions = resolvePdfOptions(options);
+    const executablePath = await resolveBrowserExecutablePath(resolvedOptions.browserExecutablePath);
     const html = await renderCvHtmlDocumentNode(data);
     const metrics =
       resolvedOptions.mode === "continuous"
@@ -111,7 +189,7 @@ export const renderCvPdf = async (
       title: `${data.header.name} - CV`,
       outputFormat: resolvedOptions.format,
       timeoutMs: resolvedOptions.timeoutMs,
-      browserExecutablePath: resolvedOptions.browserExecutablePath,
+      browserExecutablePath: executablePath,
       continuousPageHeightMm:
         metrics === null ? undefined : Math.max(297, Math.ceil((metrics.continuousHeight / 72) * 25.4)),
     });

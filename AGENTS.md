@@ -80,7 +80,7 @@ Important rules:
 
 - business/render settings live inside `cv_data`
 - `render.theme`, `render.sidebarPosition`, and `render.maxPages` are part of `CvData`
-- execution-time options such as `pdf_mode` belong to the tool call, not the CV model
+- execution-time options such as `pdf_mode` and optional `browser_executable_path` belong to the tool call, not the CV model
 - `pageCount` is computed output, never input
 
 When changing schema, types, or normalization:
@@ -219,4 +219,3 @@ So every meaningful change should be checked against these questions:
 - Does this avoid unnecessary complexity?
 
 If the answer is no, revise before implementing.
-

@@ -95,6 +95,13 @@ $env:CV_PDF_MODE="continuous"
 npm.cmd run smoke:pdf
 ```
 
+Forcer un navigateur systeme specifique (optionnel) :
+
+```powershell
+$env:CV_BROWSER_EXECUTABLE_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe"
+npm.cmd run smoke:pdf
+```
+
 ### Serveur MCP
 
 ```powershell
@@ -118,7 +125,7 @@ Les regles utiles a retenir :
 
 - les parametres metier et de rendu vivent dans `cv_data`
 - `theme`, `sidebarPosition` et `maxPages` vivent dans `cv_data.render`
-- `pdf_mode` est un parametre du tool PDF, pas un champ metier du CV
+- `pdf_mode` et `browser_executable_path` (optionnel) sont des parametres d'execution des tools MCP, pas des champs metier du CV
 
 Exemple :
 
@@ -201,7 +208,8 @@ Tool :
   "name": "generate_cv_pdf",
   "arguments": {
     "cv_data": {},
-    "pdf_mode": "paginated"
+    "pdf_mode": "paginated",
+    "browser_executable_path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
   }
 }
 ```
@@ -250,6 +258,7 @@ Notes utiles :
 - le backend PDF principal est `@vivliostyle/cli`
 - le rendu est donc beaucoup plus proche du HTML/CSS source que l'ancien PDF reconstruit a la main
 - le tool MCP ne demande pas de chemin de navigateur systeme dans le cas nominal
+- `browser_executable_path` reste disponible en override optionnel si l'environnement headless local est incomplet
 - le premier rendu PDF peut etre plus lent, le temps que le runtime headless soit pret
 - le choix de ce backend implique aussi de surveiller sa licence et son impact de distribution
 

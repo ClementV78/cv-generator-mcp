@@ -7,12 +7,14 @@ import { renderCvPdf } from "../src/engine/renderPdf";
 const run = async (): Promise<void> => {
   const outputDir = join(tmpdir(), "cv-generator");
   const pdfMode = process.env.CV_PDF_MODE === "continuous" ? "continuous" : "paginated";
+  const browserExecutablePath = process.env.CV_BROWSER_EXECUTABLE_PATH?.trim() || undefined;
   const outputPath = join(outputDir, `cv-smoke-test-${pdfMode}.pdf`);
 
   await mkdir(outputDir, { recursive: true });
 
   const pdf = await renderCvPdf(sampleCv, {
     mode: pdfMode,
+    browserExecutablePath,
   });
   await writeFile(outputPath, pdf);
 

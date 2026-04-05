@@ -430,6 +430,9 @@ Exemples :
 - `cv_data.render.sidebarPosition`
 - `cv_data.render.maxPages`
 - `generate_cv_pdf.pdf_mode`
+- `generate_cv_pdf.browser_executable_path` (optionnel)
+- `validate_cv.browser_executable_path` (optionnel)
+- `generate_cv_html.browser_executable_path` (optionnel)
 
 Important :
 
@@ -605,6 +608,7 @@ Verifier :
 - mode pagine via `Vivliostyle`
 - mode continu via `Vivliostyle`
 - aucun chemin de navigateur systeme a fournir dans le flux MCP normal
+- possibilite d'override explicite via `browser_executable_path` si l'environnement headless local est incomplet
 
 ### MCP
 
@@ -698,6 +702,13 @@ npm.cmd run smoke:pdf
 
 ```powershell
 $env:CV_PDF_MODE="continuous"
+npm.cmd run smoke:pdf
+```
+
+### Smoke PDF avec navigateur force (optionnel)
+
+```powershell
+$env:CV_BROWSER_EXECUTABLE_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe"
 npm.cmd run smoke:pdf
 ```
 

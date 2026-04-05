@@ -6,6 +6,7 @@ export {
   PdfRenderError,
   renderCvPdf,
   renderCvPdfFromHtml,
+  resolveBrowserExecutablePath,
   resolvePdfOptions,
 } from "./renderPdf";
 export { writeBinaryArtifactToTempFile } from "./output";
