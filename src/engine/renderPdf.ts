@@ -1,5 +1,6 @@
 import { access } from "node:fs/promises";
 import process from "node:process";
+import { PDFDocument } from "pdf-lib";
 import type { CvData } from "../types";
 import { measureCvLayout, type PdfMode } from "./pdfLayout";
 import { renderCvHtmlDocumentNode } from "./renderHtmlNode";
@@ -67,6 +68,16 @@ const BROWSER_ENV_KEYS = [
   "CHROME_PATH",
 ] as const;
 
+const A4_PAGE_HEIGHT_PTS = 841.89;
+const BREAK_TARGET_SHIFT_PTS = 72;
+const MIN_FINAL_SLICE_HEIGHT_PTS = 150;
+
+interface PaginatedSliceHints {
+  estimatedContinuousHeightPts?: number;
+  mainBreakOffsets?: number[];
+  sidebarBreakOffsets?: number[];
+}
+
 export class PdfRenderError extends Error {
   readonly code: string;
   cause?: unknown;
@@ -133,6 +144,159 @@ export const resolveBrowserExecutablePath = async (
   return undefined;
 };
 
+const toUniqueSorted = (values: number[]): number[] => {
+  const sorted = values
+    .filter((value) => Number.isFinite(value))
+    .map((value) => Math.round(value * 100) / 100)
+    .sort((a, b) => a - b);
+  const unique: number[] = [];
+  for (const value of sorted) {
+    if (unique.length === 0 || Math.abs(value - unique[unique.length - 1]!) > 1) {
+      unique.push(value);
+    }
+  }
+  return unique;
+};
+
+const nearestDistance = (values: number[], target: number): number => {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  let best = Number.POSITIVE_INFINITY;
+  for (const value of values) {
+    const distance = Math.abs(value - target);
+    if (distance < best) {
+      best = distance;
+    }
+  }
+
+  return best;
+};
+
+const computeSmartSliceBoundaries = (
+  sourceHeight: number,
+  hints: PaginatedSliceHints,
+): number[] => {
+  const estimatedHeight = hints.estimatedContinuousHeightPts;
+  const scale =
+    estimatedHeight && estimatedHeight > 0
+      ? Math.min(1, sourceHeight / estimatedHeight)
+      : 1;
+  const mainBreakOffsets = toUniqueSorted(
+    (hints.mainBreakOffsets ?? []).map((value) => value * scale),
+  );
+  const sidebarBreakOffsets = toUniqueSorted(
+    (hints.sidebarBreakOffsets ?? []).map((value) => value * scale),
+  );
+  const allBreakOffsets = toUniqueSorted([...mainBreakOffsets, ...sidebarBreakOffsets]).filter(
+    (value) => value > 0 && value < sourceHeight,
+  );
+  const boundaries: number[] = [0];
+  let cursor = 0;
+
+  while (sourceHeight - cursor > A4_PAGE_HEIGHT_PTS + 0.5) {
+    const target = cursor + A4_PAGE_HEIGHT_PTS;
+    let minAllowed = Math.max(
+      cursor + 36,
+      target - BREAK_TARGET_SHIFT_PTS,
+    );
+    const maxAllowed = Math.min(
+      sourceHeight - MIN_FINAL_SLICE_HEIGHT_PTS,
+      target,
+    );
+    const remainingSpan = sourceHeight - cursor;
+    if (remainingSpan <= A4_PAGE_HEIGHT_PTS * 2 + 0.5) {
+      minAllowed = Math.max(minAllowed, sourceHeight - A4_PAGE_HEIGHT_PTS);
+    }
+    let nextBoundary = target;
+
+    if (allBreakOffsets.length > 0 && maxAllowed > minAllowed) {
+      const candidates = allBreakOffsets.filter((value) => value >= minAllowed && value <= maxAllowed);
+      if (candidates.length > 0) {
+        const stronglyAlignedCandidates = candidates.filter(
+          (candidate) =>
+            nearestDistance(mainBreakOffsets, candidate) <= 18 &&
+            nearestDistance(sidebarBreakOffsets, candidate) <= 24,
+        );
+        if (stronglyAlignedCandidates.length > 0) {
+          nextBoundary = stronglyAlignedCandidates[stronglyAlignedCandidates.length - 1]!;
+        } else {
+          let bestScore = Number.POSITIVE_INFINITY;
+          for (const candidate of candidates) {
+            const targetDistance = Math.abs(candidate - target);
+            const alignmentDistance = Math.max(
+              nearestDistance(mainBreakOffsets, candidate),
+              nearestDistance(sidebarBreakOffsets, candidate),
+            );
+            const score = targetDistance * 0.9 + alignmentDistance * 2.5;
+            if (score < bestScore) {
+              bestScore = score;
+              nextBoundary = candidate;
+            }
+          }
+        }
+      }
+    }
+
+    nextBoundary = Math.max(nextBoundary, minAllowed);
+    nextBoundary = Math.min(nextBoundary, sourceHeight - 1);
+    if (nextBoundary <= cursor + 1) {
+      nextBoundary = Math.min(sourceHeight, cursor + A4_PAGE_HEIGHT_PTS);
+    }
+
+    boundaries.push(nextBoundary);
+    cursor = nextBoundary;
+  }
+
+  boundaries.push(sourceHeight);
+  return toUniqueSorted(boundaries);
+};
+
+const paginatePdfToA4 = async (
+  sourcePdf: Uint8Array,
+  hints: PaginatedSliceHints = {},
+): Promise<Uint8Array> => {
+  const source = await PDFDocument.load(sourcePdf);
+  const output = await PDFDocument.create();
+  const sourcePages = source.getPages();
+
+  for (const [sourcePageIndex, sourcePage] of sourcePages.entries()) {
+    const sourceWidth = sourcePage.getWidth();
+    const sourceHeight = sourcePage.getHeight();
+    const boundaries =
+      sourcePageIndex === 0
+        ? computeSmartSliceBoundaries(sourceHeight, hints)
+        : computeSmartSliceBoundaries(sourceHeight, {});
+
+    for (let sliceIndex = 0; sliceIndex < boundaries.length - 1; sliceIndex += 1) {
+      const startOffset = boundaries[sliceIndex]!;
+      const endOffset = boundaries[sliceIndex + 1]!;
+      const constrainedStartOffset = Math.max(startOffset, endOffset - A4_PAGE_HEIGHT_PTS);
+      const top = sourceHeight - constrainedStartOffset;
+      const bottom = sourceHeight - endOffset;
+      const sliceHeight = endOffset - constrainedStartOffset;
+
+      const embeddedSlice = await output.embedPage(sourcePage, {
+        left: 0,
+        right: sourceWidth,
+        bottom,
+        top,
+      });
+
+      const page = output.addPage([sourceWidth, A4_PAGE_HEIGHT_PTS]);
+      page.drawPage(embeddedSlice, {
+        x: 0,
+        y: A4_PAGE_HEIGHT_PTS - sliceHeight,
+        width: sourceWidth,
+        height: sliceHeight,
+      });
+    }
+  }
+
+  return await output.save();
+};
+
 export const renderCvPdfFromHtml = async (
   html: string,
   options: RenderPdfOptions = {},
@@ -178,20 +342,33 @@ export const renderCvPdf = async (
     const resolvedOptions = resolvePdfOptions(options);
     const executablePath = await resolveBrowserExecutablePath(resolvedOptions.browserExecutablePath);
     const html = await renderCvHtmlDocumentNode(data);
-    const metrics =
-      resolvedOptions.mode === "continuous"
-        ? await measureCvLayout(data, "continuous")
-        : null;
+    const continuousMetrics = await measureCvLayout(data, "continuous");
+    const paginatedMetrics = await measureCvLayout(data, "paginated");
+    const estimatedHeightMm = Math.ceil((continuousMetrics.continuousHeight / 72) * 25.4);
+    const paginatedGuardHeightMm =
+      paginatedMetrics.pageCount <= 1
+        ? 297
+        : (paginatedMetrics.pageCount - 1) * 297 + 160;
+    const continuousPageHeightMm = Math.max(297, estimatedHeightMm + 24, paginatedGuardHeightMm);
 
-    return await renderPdfWithVivliostyle({
+    const continuousPdf = await renderPdfWithVivliostyle({
       html,
-      mode: resolvedOptions.mode,
+      mode: "continuous",
       title: `${data.header.name} - CV`,
       outputFormat: resolvedOptions.format,
       timeoutMs: resolvedOptions.timeoutMs,
       browserExecutablePath: executablePath,
-      continuousPageHeightMm:
-        metrics === null ? undefined : Math.max(297, Math.ceil((metrics.continuousHeight / 72) * 25.4)),
+      continuousPageHeightMm,
+    });
+
+    if (resolvedOptions.mode === "continuous") {
+      return continuousPdf;
+    }
+
+    return await paginatePdfToA4(continuousPdf, {
+      estimatedContinuousHeightPts: continuousMetrics.continuousHeight,
+      mainBreakOffsets: continuousMetrics.mainBreakOffsets,
+      sidebarBreakOffsets: continuousMetrics.sidebarBreakOffsets,
     });
   } catch (error) {
     if (error instanceof PdfRenderError) {

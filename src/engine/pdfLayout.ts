@@ -11,6 +11,8 @@ export interface PdfLayoutMetrics {
   pageLimitExceeded: boolean;
   issues: ValidationIssue[];
   continuousHeight: number;
+  mainBreakOffsets: number[];
+  sidebarBreakOffsets: number[];
 }
 
 const PAGE_WIDTH = 595.28;
@@ -115,10 +117,15 @@ class Flow {
   page = 0;
   top = 0;
   maxTop = 0;
+  breakOffsets: number[] = [];
 
   constructor(private readonly mode: PdfMode, private readonly contentHeight: number) {}
 
-  reserve(height: number): { page: number; top: number } {
+  reserve(
+    height: number,
+    options: { trackBreakOffset?: boolean } = {},
+  ): { page: number; top: number } {
+    const trackBreakOffset = options.trackBreakOffset ?? true;
     if (this.mode === "paginated" && this.top > 0 && this.top + height > this.contentHeight) {
       this.page += 1;
       this.top = 0;
@@ -127,11 +134,18 @@ class Flow {
     const placement = { page: this.page, top: this.top };
     this.top += height;
     this.maxTop = Math.max(this.maxTop, this.top);
+    if (trackBreakOffset) {
+      this.breakOffsets.push(this.absoluteTop());
+    }
     return placement;
   }
 
   gap(height: number): void {
-    this.reserve(height);
+    this.reserve(height, { trackBreakOffset: false });
+  }
+
+  absoluteTop(): number {
+    return this.page * this.contentHeight + this.top;
   }
 }
 
@@ -169,6 +183,25 @@ const createPage = (doc: PDFDocument, pageHeight: number, sidebarPosition: "left
 
 const collectBulletHeight = (bullets: TextItem[], font: PDFFont, width: number): number =>
   bullets.reduce((total, bullet) => total + textHeight(bullet.text, font, 10, width) + 4, 0);
+
+const normalizeBreakOffsets = (values: number[], maxHeight: number): number[] => {
+  const lowerBound = 36;
+  const upperBound = Math.max(lowerBound, maxHeight - 36);
+  const sorted = values
+    .filter((value) => Number.isFinite(value))
+    .map((value) => Math.round(value * 100) / 100)
+    .filter((value) => value >= lowerBound && value <= upperBound)
+    .sort((a, b) => a - b);
+
+  const unique: number[] = [];
+  for (const value of sorted) {
+    if (unique.length === 0 || Math.abs(value - unique[unique.length - 1]!) > 1) {
+      unique.push(value);
+    }
+  }
+
+  return unique;
+};
 
 const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: PdfLayoutMetrics; regular: PDFFont; bold: PDFFont }> => {
   const doc = await PDFDocument.create();
@@ -244,6 +277,7 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
   });
 
   const main = new Flow(mode, contentHeight);
+  const mainSoftBreakOffsets: number[] = [];
   main.reserve(textHeight(data.header.name, bold, 28, mainWidth) + textHeight(data.header.headline, bold, 13, mainWidth) + 16);
   issueIfTooTall(issues, data.profileLabel, LIMITS.profileLines, data.profile, regular, 10, mainWidth - 70, "profile");
   main.reserve(textHeight(`${data.profileLabel} : ${data.profile}`, regular, 10, mainWidth - 20) + 16);
@@ -251,17 +285,46 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
   main.reserve(textHeight("EXPÉRIENCES PROFESSIONNELLES ET PROJETS", bold, 18, mainWidth) + 8);
 
   data.experiences.forEach((experience, experienceIndex) => {
+    const experienceStartOffset = main.absoluteTop();
     issueIfTooTall(issues, "Période", 1, experience.period, regular, 8.5, mainWidth - 40, `experiences.${experienceIndex}.period`);
     issueIfTooTall(issues, "Sous-titre d'expérience", 2, experience.subtitle, bold, 10.5, mainWidth - 40, `experiences.${experienceIndex}.subtitle`);
     issueIfTooTall(issues, experience.techEnvironmentLabel, LIMITS.techEnvironmentLines, experience.techEnvironment, regular, 8.75, mainWidth - 52, `experiences.${experienceIndex}.techEnvironment`);
     experience.bullets.forEach((bullet, bulletIndex) => issueIfTooTall(issues, "Bullet point", LIMITS.bulletLines, bullet.text, regular, 10, mainWidth - 54, `experiences.${experienceIndex}.bullets.${bulletIndex}.text`));
-    let experienceHeight = 48 + textHeight(experience.period, regular, 8.5, mainWidth - 40) + textHeight(experience.subtitle, bold, 10.5, mainWidth - 40) + collectBulletHeight(experience.bullets, regular, mainWidth - 54) + textHeight(`${experience.techEnvironmentLabel} : ${experience.techEnvironment}`, regular, 8.75, mainWidth - 40);
+    const periodHeight = textHeight(experience.period, regular, 8.5, mainWidth - 40);
+    const subtitleHeight = textHeight(experience.subtitle, bold, 10.5, mainWidth - 40);
+    const experienceTechHeight = textHeight(`${experience.techEnvironmentLabel} : ${experience.techEnvironment}`, regular, 8.75, mainWidth - 40);
+    const bulletHeights = experience.bullets.map((bullet) => textHeight(bullet.text, regular, 10, mainWidth - 54) + 4);
+    let experienceHeight = 48 + periodHeight + subtitleHeight + experienceTechHeight;
+    let relativeOffset = 48 + periodHeight + subtitleHeight;
+    mainSoftBreakOffsets.push(experienceStartOffset + relativeOffset);
+    bulletHeights.forEach((bulletHeight) => {
+      relativeOffset += bulletHeight;
+      experienceHeight += bulletHeight;
+      mainSoftBreakOffsets.push(experienceStartOffset + relativeOffset);
+    });
     experience.projects.forEach((project, projectIndex) => {
       issueIfTooTall(issues, "Période", 1, project.period, regular, 8.5, mainWidth - 68, `experiences.${experienceIndex}.projects.${projectIndex}.period`);
       issueIfTooTall(issues, project.techEnvironmentLabel, LIMITS.techEnvironmentLines, project.techEnvironment, regular, 8.5, mainWidth - 68, `experiences.${experienceIndex}.projects.${projectIndex}.techEnvironment`);
       project.bullets.forEach((bullet, bulletIndex) => issueIfTooTall(issues, "Bullet point", LIMITS.bulletLines, bullet.text, regular, 10, mainWidth - 80, `experiences.${experienceIndex}.projects.${projectIndex}.bullets.${bulletIndex}.text`));
-      experienceHeight += 24 + textHeight(project.title, bold, 11, mainWidth - 68) + textHeight(project.period, regular, 8.5, mainWidth - 68) + collectBulletHeight(project.bullets, regular, mainWidth - 80) + textHeight(`${project.techEnvironmentLabel} : ${project.techEnvironment}`, regular, 8.5, mainWidth - 68);
+      const projectTitleHeight = textHeight(project.title, bold, 11, mainWidth - 68);
+      const projectPeriodHeight = textHeight(project.period, regular, 8.5, mainWidth - 68);
+      const projectTechHeight = textHeight(`${project.techEnvironmentLabel} : ${project.techEnvironment}`, regular, 8.5, mainWidth - 68);
+      const projectBulletHeights = project.bullets.map((bullet) => textHeight(bullet.text, regular, 10, mainWidth - 80) + 4);
+      let projectRelativeHeight = 24 + projectTitleHeight + projectPeriodHeight + projectTechHeight;
+      let projectOffset = relativeOffset + 24 + projectTitleHeight + projectPeriodHeight;
+      mainSoftBreakOffsets.push(experienceStartOffset + projectOffset);
+      projectBulletHeights.forEach((bulletHeight) => {
+        projectOffset += bulletHeight;
+        projectRelativeHeight += bulletHeight;
+        mainSoftBreakOffsets.push(experienceStartOffset + projectOffset);
+      });
+      projectOffset += projectTechHeight;
+      mainSoftBreakOffsets.push(experienceStartOffset + projectOffset);
+      experienceHeight += projectRelativeHeight;
+      relativeOffset += projectRelativeHeight;
     });
+    relativeOffset += experienceTechHeight;
+    mainSoftBreakOffsets.push(experienceStartOffset + relativeOffset);
     main.reserve(experienceHeight);
     main.gap(10);
   });
@@ -272,13 +335,30 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
   }
 
   const pageCount = mode === "continuous" ? 1 : Math.max(sidebar.page + 1, main.page + 1);
-  const continuousHeight = Math.max(sidebar.maxTop, main.maxTop) + TOP_MARGIN + BOTTOM_MARGIN + 8;
+  const contentMaxHeight = Math.max(sidebar.maxTop, main.maxTop);
+  const continuousHeight = contentMaxHeight + TOP_MARGIN + BOTTOM_MARGIN + 8;
+  const mainBreakOffsets = normalizeBreakOffsets(
+    [...main.breakOffsets, ...mainSoftBreakOffsets],
+    contentMaxHeight,
+  );
+  const sidebarBreakOffsets = normalizeBreakOffsets(sidebar.breakOffsets, contentMaxHeight);
   const pageLimitExceeded = data.render.maxPages !== null && pageCount > data.render.maxPages;
   if (pageLimitExceeded) {
     issues.push({ id: `page-limit-${data.render.maxPages}`, message: `Le rendu depasse la limite de ${data.render.maxPages} pages.` });
   }
 
-  return { metrics: { pageCount, pageLimitExceeded, issues, continuousHeight }, regular, bold };
+  return {
+    metrics: {
+      pageCount,
+      pageLimitExceeded,
+      issues,
+      continuousHeight,
+      mainBreakOffsets,
+      sidebarBreakOffsets,
+    },
+    regular,
+    bold,
+  };
 };
 
 export const measureCvLayout = async (data: CvData, mode: PdfMode = "paginated"): Promise<PdfLayoutMetrics> =>
