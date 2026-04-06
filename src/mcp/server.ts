@@ -67,7 +67,8 @@ export const createCvMcpServer = (): McpServer => {
     "generate_cv_html",
     {
       title: "Generate CV HTML",
-      description: "Genere un CV HTML propre a partir d'un CvData JSON.",
+      description:
+        "Genere un CV HTML propre a partir d'un CvData JSON. Si le client ne dispose pas encore d'un CvData complet, appeler d'abord get_cv_schema puis construire cv_data avant cet appel.",
       inputSchema: cvDataInputSchema.shape,
       annotations: {
         readOnlyHint: true,
@@ -122,7 +123,8 @@ export const createCvMcpServer = (): McpServer => {
     "generate_cv_pdf",
     {
       title: "Generate CV PDF",
-      description: "Genere un CV PDF headless a partir d'un CvData JSON.",
+      description:
+        "Genere un CV PDF headless a partir d'un CvData JSON. Le resultat inclut file_path: toujours le relayer explicitement a l'utilisateur.",
       inputSchema: pdfToolInputSchema.shape,
       annotations: {
         readOnlyHint: false,
@@ -164,17 +166,20 @@ export const createCvMcpServer = (): McpServer => {
 
         const filePath = await writeBinaryArtifactToTempFile(artifact.fileName, artifact.binaryContent);
 
-        return createSuccessResponse("CV PDF genere avec succes.", {
-          format: "pdf",
-          pdf_mode: resolvedPdfMode,
-          file_name: artifact.fileName,
-          mime_type: artifact.mimeType,
-          file_path: filePath,
-          page_count: validation.pageCount,
-          page_limit_exceeded: validation.pageLimitExceeded,
-          issues: validation.issues,
-          structure_messages: validation.structureMessages,
-        });
+        return createSuccessResponse(
+          `CV PDF genere avec succes.\nChemin du fichier PDF : ${filePath}\nMode : ${resolvedPdfMode}`,
+          {
+            format: "pdf",
+            pdf_mode: resolvedPdfMode,
+            file_name: artifact.fileName,
+            mime_type: artifact.mimeType,
+            file_path: filePath,
+            page_count: validation.pageCount,
+            page_limit_exceeded: validation.pageLimitExceeded,
+            issues: validation.issues,
+            structure_messages: validation.structureMessages,
+          },
+        );
       } catch (error) {
         return createErrorResponse(
           getErrorMessage(error, "Impossible de generer le CV PDF."),
