@@ -18,29 +18,33 @@ Il ne sert pas a argumenter un choix ; il sert a expliquer **comment l'applicati
 
 ## Vue D'Ensemble
 
-L'application est composee de 3 sous-systemes principaux :
+L'application est composee de 4 sous-systemes principaux :
 
 1. **UI Web**
 2. **CV Engine**
 3. **Serveur MCP local**
+4. **CLI locale**
 
 Positionnement :
 
 - l'UI web est l'interface d'edition humaine
 - le moteur Node est la source de verite
 - le serveur MCP est la couche d'exposition principale pour les agents
+- la CLI locale est un adaptateur terminal aligne sur la surface MCP
 
 ```mermaid
 flowchart LR
     UI[UI Web / Editeur]
     ENGINE[CV Engine]
     MCP[MCP Server local]
+    CLI[CLI locale]
     PDF[PDF Headless]
     HTML[HTML Export]
     JSON[JSON Export]
 
     UI --> ENGINE
     MCP --> ENGINE
+    CLI --> ENGINE
     ENGINE --> HTML
     ENGINE --> JSON
     ENGINE --> PDF
@@ -51,7 +55,7 @@ flowchart LR
 
     class UI ui;
     class ENGINE,HTML,JSON,PDF engine;
-    class MCP infra;
+    class MCP,CLI infra;
 ```
 
 ---
@@ -62,17 +66,24 @@ flowchart LR
 CV_Generator/
   src/
     app.ts
+    constants.ts
     main.ts
     model.ts
+    store.ts
+    validationShared.ts
     types.ts
     validation.ts
+    vite-env.d.ts
     styles.css
+    cli/
+      cvCli.ts
     data/
       presets.ts
       sampleCv.ts
     engine/
       index.ts
       output.ts
+      pdfLayout.ts
       qr.ts
       renderHtml.ts
       renderHtmlNode.ts
@@ -87,6 +98,7 @@ CV_Generator/
   scripts/
     smoke-pdf.ts
   tests/
+    cli.test.ts
     fixtures/
     engine-service.test.ts
     mcp-server.test.ts
@@ -577,7 +589,39 @@ En cas d'erreur :
 
 ---
 
-## Sous-Systeme 6 - Tests
+## Sous-Systeme 6 - CLI Locale
+
+## Role
+
+La CLI locale expose les memes capacites metier que le MCP, en mode terminal.
+
+Elle permet :
+
+- l'usage scriptable hors chat MCP
+- la validation d'un `cv_data` depuis un fichier JSON
+- la generation HTML/PDF avec un chemin de sortie explicite
+- un contournement pratique des limites de tool-call de certains petits LLM
+
+## Fichier Principal
+
+- [cvCli.ts](./src/cli/cvCli.ts)
+
+## Commandes exposees
+
+- `get-cv-schema`
+- `validate-cv`
+- `generate-cv-html`
+- `generate-cv-pdf`
+
+## Semantique
+
+- workflow recommande: `get-cv-schema -> validate-cv -> generate-cv-pdf/html`
+- sortie JSON stable sur `stdout`
+- code de sortie `0` en succes, `1` en erreur
+
+---
+
+## Sous-Systeme 7 - Tests
 
 ## Role
 
@@ -587,12 +631,14 @@ Verifier :
 - le moteur
 - le PDF
 - le serveur MCP
+- la CLI
 
 ## Fichiers Principaux
 
 - [engine-service.test.ts](./tests/engine-service.test.ts)
 - [render-pdf.test.ts](./tests/render-pdf.test.ts)
 - [mcp-server.test.ts](./tests/mcp-server.test.ts)
+- [cli.test.ts](./tests/cli.test.ts)
 
 ## Couverture Actuelle
 
@@ -617,6 +663,12 @@ Verifier :
 - generation HTML
 - generation PDF continue
 
+### CLI
+
+- aide globale et aide par commande
+- schema, validation et generation HTML
+- format de sortie JSON stable
+
 ---
 
 ## Frontieres Techniques
@@ -636,6 +688,7 @@ Verifier :
 - validation headless
 - schema JSON
 - exposition MCP
+- exposition CLI
 - ecriture de fichiers PDF temporaires
 
 ## Regle De Separation
@@ -659,6 +712,10 @@ En particulier :
 ## MCP
 
 - [server.ts](./src/mcp/server.ts)
+
+## CLI
+
+- [cvCli.ts](./src/cli/cvCli.ts)
 
 ## Smoke PDF
 
@@ -692,6 +749,21 @@ npm.cmd test
 npm.cmd run mcp
 ```
 
+### Lancer le CLI (surface alignee MCP)
+
+```powershell
+npm.cmd run cli -- --help
+```
+
+Exemples :
+
+```powershell
+npm.cmd run cli -- get-cv-schema
+npm.cmd run cli -- validate-cv --cv-data .\examples\cv-minimal.json
+npm.cmd run cli -- generate-cv-html --cv-data .\examples\cv-minimal.json --output .\cv-output.html
+npm.cmd run cli -- generate-cv-pdf --cv-data .\examples\cv-minimal.json --pdf-mode paginated --output .\cv-output.pdf
+```
+
 ### Smoke PDF pagine
 
 ```powershell
@@ -718,15 +790,16 @@ npm.cmd run smoke:pdf
 
 ```mermaid
 flowchart TD
-    A[Creation / edition] --> B[Etat CvData]
+    A[UI / MCP Client / CLI] --> B[Etat CvData]
     B --> C[Normalisation]
     C --> D[Validation]
     D --> E[HTML]
     D --> F[PDF]
-    D --> G[MCP Response]
+    D --> G[Reponse MCP]
+    D --> H[Sortie CLI JSON]
 
     classDef lifecycle fill:#EBF8EF,stroke:#3DA35D,color:#183D22,stroke-width:2px;
-    class A,B,C,D,E,F,G lifecycle;
+    class A,B,C,D,E,F,G,H lifecycle;
 ```
 
 ---
@@ -738,19 +811,21 @@ L'application fonctionne comme suit :
 - la UI web edite un `CvData`
 - le moteur transforme ce `CvData` en HTML, PDF ou validation
 - le serveur MCP expose ce moteur a un agent externe
+- la CLI locale expose le meme moteur en mode terminal
 
 Le coeur du systeme est donc :
 
 - **le modele `CvData`**
 - **la facade `engine/service.ts`**
 
-Et les deux consommateurs principaux sont :
+Et les trois consommateurs principaux sont :
 
 - **l'UI**
 - **le MCP**
+- **la CLI**
 
 L'architecture est aussi pensee pour rester compatible avec d'autres couches d'appel locales, par exemple :
 
-- un wrapper CLI
+- des scripts shell / CI
 - un bridge MCP pour LM Studio
 - d'autres clients capables de lancer un process local

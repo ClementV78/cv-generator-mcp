@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "cli": "tsx src/cli/cvCli.ts",
     "mcp": "tsx src/mcp/server.ts",
     "smoke:pdf": "tsx scripts/smoke-pdf.ts",
     "test": "tsx --test tests/**/*.test.ts"

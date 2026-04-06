@@ -17,6 +17,59 @@ const pdfToolInputSchema = cvDataInputSchema.extend({
   pdf_mode: z.enum(["paginated", "continuous"]).optional(),
 });
 
+const compactCvDataExample = {
+  header: {
+    name: "Thomas Dubois",
+    headline: "ARCHITECTE CLOUD SENIOR | AWS | AZURE | KUBERNETES",
+    location: "Paris, France",
+    email: "thomas.dubois@email.com",
+    linkedin: "linkedin.com/in/thomas-dubois-cloud",
+  },
+  profileLabel: "Profil professionnel",
+  profile:
+    "Architecte Cloud senior avec experience en plateformes scalables, migration cloud et optimisation des couts.",
+  experiences: [
+    {
+      company: "CloudScale Solutions",
+      role: "Lead Cloud Architect",
+      period: "2021 - Present",
+      subtitle: "Architecture cloud enterprise",
+      bullets: [
+        { text: "Conception d'architectures AWS/Azure hautement disponibles." },
+      ],
+      techEnvironmentLabel: "Environnement technique",
+      techEnvironment: "AWS, Azure, Kubernetes, Terraform",
+      projects: [],
+    },
+    {
+      company: "TechNova Paris",
+      role: "Cloud Architect",
+      period: "2018 - 2021",
+      subtitle: "Architecture multi-cloud finance",
+      bullets: [{ text: "Optimisation des couts cloud et fiabilite des deployments." }],
+      techEnvironmentLabel: "Environnement technique",
+      techEnvironment: "AWS, Docker, Terraform, CI/CD",
+      projects: [],
+    },
+    {
+      company: "StartupFin Paris",
+      role: "Cloud Engineer",
+      period: "2015 - 2018",
+      subtitle: "Migration vers Kubernetes",
+      bullets: [{ text: "Migration legacy vers EKS et automatisation des pipelines." }],
+      techEnvironmentLabel: "Environnement technique",
+      techEnvironment: "Kubernetes, Terraform, Jenkins, AWS",
+      projects: [],
+    },
+  ],
+  render: {
+    mode: "preview",
+    maxPages: 2,
+    theme: "ocean",
+    sidebarPosition: "left",
+  },
+} as const;
+
 const createSuccessResponse = <T extends Record<string, unknown>>(text: string, data: T) => ({
   content: [
     {
@@ -124,7 +177,7 @@ export const createCvMcpServer = (): McpServer => {
     {
       title: "Generate CV PDF",
       description:
-        "Genere un CV PDF headless a partir d'un CvData JSON. Le resultat inclut file_path: toujours le relayer explicitement a l'utilisateur.",
+        "Genere un CV PDF headless a partir d'un CvData JSON. Utiliser un cv_data compact (sans ids inutiles) pour eviter les tool-calls trop longues. Le resultat inclut file_path: toujours le relayer explicitement a l'utilisateur.",
       inputSchema: pdfToolInputSchema.shape,
       annotations: {
         readOnlyHint: false,
@@ -246,6 +299,7 @@ export const createCvMcpServer = (): McpServer => {
         "Schema CvData retourne.",
         "IMPORTANT: utilisez uniquement ce contrat.",
         "Workflow recommande: get_cv_schema -> validate_cv -> generate_cv_pdf/html.",
+        "Utilisez un payload COMPACT pour les tool-calls: omettez les ids, minimisez les tableaux, pas de texte inutile.",
         "",
         "Champs racine attendus dans cv_data:",
         "- header",
@@ -267,9 +321,9 @@ export const createCvMcpServer = (): McpServer => {
         "- skills -> skillGroups",
         "- education -> mainEducation + formations",
         "",
-        "Exemple minimal valide:",
+        "Exemple compact recommande pour generate_cv_pdf (3 missions):",
         "```json",
-        example ? JSON.stringify(example, null, 2) : "{}",
+        JSON.stringify(compactCvDataExample, null, 2),
         "```",
       ].join("\n");
 

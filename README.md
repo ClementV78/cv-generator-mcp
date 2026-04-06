@@ -5,16 +5,17 @@ Generateur de CV avec :
 - une **UI web locale** pour l'edition humaine
 - un **moteur Node** pour le rendu et la validation
 - un **serveur MCP local** pour l'usage par LLM / agents
+- une **CLI locale** pour scripts et integrations hors chat MCP
 
 Le coeur public du projet est `engine + MCP`.
-L'UI reste incluse pour un usage local, mais ce n'est pas l'interface principale du produit communautaire.
+L'UI et la CLI restent incluses pour un usage local, mais la surface agent publique reste prioritairement `MCP`.
 
 ## Ce que fait le projet
 
 - genere un CV HTML a partir d'un JSON `CvData`
 - genere un CV PDF headless
 - valide la structure et la pagination d'un CV
-- expose ces capacites via MCP local
+- expose ces capacites via MCP local et CLI locale
 
 Tools MCP publics :
 
@@ -23,7 +24,7 @@ Tools MCP publics :
 - `validate_cv`
 - `get_cv_schema`
 
-## Deux usages
+## Trois usages
 
 ### 1. Usage local humain
 
@@ -49,6 +50,15 @@ Important :
 - le tool n'appelle jamais l'UI
 - il appelle le moteur Node
 - le serveur MCP tourne en `stdio`, pas en HTTP
+
+### 3. Usage script / terminal
+
+CLI locale alignee sur la surface MCP pour :
+
+- recuperer le schema `CvData`
+- valider un fichier `cv_data` JSON
+- generer un HTML
+- generer un PDF `paginated | continuous`
 
 ## Prerequis
 
@@ -107,6 +117,42 @@ npm.cmd run smoke:pdf
 ```powershell
 npm.cmd run mcp
 ```
+
+### CLI locale (meme surface que MCP)
+
+```powershell
+npm.cmd run cli -- --help
+```
+
+Schema:
+
+```powershell
+npm.cmd run cli -- get-cv-schema
+```
+
+Validation:
+
+```powershell
+npm.cmd run cli -- validate-cv --cv-data .\examples\cv-minimal.json
+```
+
+Generation HTML:
+
+```powershell
+npm.cmd run cli -- generate-cv-html --cv-data .\examples\cv-minimal.json --output .\cv-output.html
+```
+
+Generation PDF:
+
+```powershell
+npm.cmd run cli -- generate-cv-pdf --cv-data .\examples\cv-minimal.json --pdf-mode paginated --output .\cv-output.pdf
+```
+
+Options alignees MCP:
+
+- `--pdf-mode` / `--pdf_mode` (`paginated | continuous`)
+- `--browser-executable-path` / `--browser_executable_path`
+- `--cv-data` / `--cv_data` / `--input`
 
 ## Exemples JSON
 
