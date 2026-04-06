@@ -227,7 +227,8 @@ export const createCvMcpServer = (): McpServer => {
     "get_cv_schema",
     {
       title: "Get CV Schema",
-      description: "Retourne le JSON Schema du contrat CvData.",
+      description:
+        "Retourne le JSON Schema du contrat CvData avec un exemple et des hints de workflow (schema -> validate_cv -> generate_cv_pdf/html).",
       inputSchema: z.object({}).shape,
       annotations: {
         readOnlyHint: true,
@@ -237,6 +238,21 @@ export const createCvMcpServer = (): McpServer => {
     async () =>
       createSuccessResponse("Schema CvData retourne.", {
         schema: getCvSchema(),
+        hints: {
+          workflow: [
+            "1) get_cv_schema",
+            "2) construire cv_data conforme",
+            "3) validate_cv",
+            "4) generate_cv_pdf ou generate_cv_html",
+          ],
+          aliases_not_supported: {
+            personalInfo: "header",
+            summary: "profile",
+            experience: "experiences",
+            skills: "skillGroups",
+            education: "mainEducation + formations",
+          },
+        },
       }),
   );
 
