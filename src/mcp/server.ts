@@ -235,9 +235,46 @@ export const createCvMcpServer = (): McpServer => {
         openWorldHint: false,
       },
     },
-    async () =>
-      createSuccessResponse("Schema CvData retourne.", {
-        schema: getCvSchema(),
+    async () => {
+      const schema = getCvSchema();
+      const example =
+        Array.isArray(schema.examples) && schema.examples.length > 0
+          ? schema.examples[0]
+          : null;
+
+      const schemaText = [
+        "Schema CvData retourne.",
+        "IMPORTANT: utilisez uniquement ce contrat.",
+        "Workflow recommande: get_cv_schema -> validate_cv -> generate_cv_pdf/html.",
+        "",
+        "Champs racine attendus dans cv_data:",
+        "- header",
+        "- profileLabel",
+        "- profile",
+        "- skillGroups",
+        "- highlights",
+        "- certifications",
+        "- formations",
+        "- languages",
+        "- experiences",
+        "- mainEducation",
+        "- render",
+        "",
+        "Aliases NON supportes:",
+        "- personalInfo -> header",
+        "- summary -> profile",
+        "- experience -> experiences",
+        "- skills -> skillGroups",
+        "- education -> mainEducation + formations",
+        "",
+        "Exemple minimal valide:",
+        "```json",
+        example ? JSON.stringify(example, null, 2) : "{}",
+        "```",
+      ].join("\n");
+
+      return createSuccessResponse(schemaText, {
+        schema,
         hints: {
           workflow: [
             "1) get_cv_schema",
@@ -253,7 +290,8 @@ export const createCvMcpServer = (): McpServer => {
             education: "mainEducation + formations",
           },
         },
-      }),
+      });
+    },
   );
 
   return server;
