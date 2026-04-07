@@ -543,6 +543,11 @@ Tools additionnels pour gros payloads :
 
 Retourne le schema JSON du contrat `CvData`.
 
+Compatibilite client :
+
+- le schema reste dans `structuredContent.schema`
+- une copie texte du schema est aussi renvoyee dans `content` pour les clients MCP qui n'exposent pas `structuredContent` au modele
+
 ### `validate_cv`
 
 Normalise et valide un `CvData`, puis retourne :

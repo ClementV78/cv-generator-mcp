@@ -51,6 +51,9 @@ test("MCP server exposes the expected tools and serves schema/html generation", 
 
     assert.equal((schemaResult as { isError?: boolean }).isError ?? false, false);
     assert.equal((schemaResult.structuredContent as { success: boolean }).success, true);
+    const schemaText = ((schemaResult.content ?? [])[0] as { text?: string } | undefined)?.text ?? "";
+    assert.match(schemaText, /JSON Schema CvData \(machine-readable\)/);
+    assert.match(schemaText, /"title": "CvData"/);
 
     const htmlResult = await client.callTool({
       name: "generate_cv_html",

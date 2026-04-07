@@ -284,6 +284,11 @@ Ou :
 
 Retourne le JSON Schema du contrat `CvData`.
 
+Compatibilite clients MCP :
+
+- le schema complet est present dans `structuredContent.schema`
+- il est aussi duplique dans `content[].text` pour les clients qui n'exposent pas `structuredContent` au LLM
+
 ### `validate_cv`
 
 Valide un `CvData`, normalise l'entree et retourne :
