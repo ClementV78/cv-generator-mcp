@@ -25,6 +25,7 @@ const pdfToolInputSchema = cvDataInputSchema.extend({
 });
 
 const startChunkedGenerationInputSchema = z.object({
+  upload_id: z.string().min(1).max(128).regex(/^[a-zA-Z0-9._:-]+$/).optional(),
   output_format: z.enum(["pdf", "html"]).optional(),
   pdf_mode: z.enum(["paginated", "continuous"]).optional(),
   browser_executable_path: z.string().optional(),
@@ -416,7 +417,7 @@ export const createCvMcpServer = (): McpServer => {
         openWorldHint: false,
       },
     },
-    async ({ output_format, pdf_mode, browser_executable_path }) => {
+    async ({ upload_id, output_format, pdf_mode, browser_executable_path }) => {
       pruneExpiredUploadSessions();
 
       const resolvedOutputFormat: OutputFormat = output_format ?? "pdf";
@@ -443,7 +444,17 @@ export const createCvMcpServer = (): McpServer => {
         );
       }
 
-      const uploadId = randomUUID();
+      const uploadId = upload_id ?? randomUUID();
+      if (chunkUploadSessions.has(uploadId)) {
+        return createErrorResponse(
+          "upload_id deja utilise dans une session active.",
+          "upload_id_already_exists",
+          {
+            upload_id: uploadId,
+          },
+        );
+      }
+
       const now = Date.now();
       chunkUploadSessions.set(uploadId, {
         id: uploadId,
@@ -456,7 +467,12 @@ export const createCvMcpServer = (): McpServer => {
       });
 
       return createSuccessResponse(
-        "Session chunked ouverte. Envoyez les chunks via append_cv_generation_chunk.",
+        [
+          "Session chunked ouverte.",
+          `upload_id: ${uploadId}`,
+          "IMPORTANT: reutilisez exactement cet upload_id dans append_cv_generation_chunk.",
+          "Envoyez les chunks via append_cv_generation_chunk.",
+        ].join("\n"),
         {
           upload_id: uploadId,
           output_format: resolvedOutputFormat,
@@ -490,13 +506,29 @@ export const createCvMcpServer = (): McpServer => {
     async ({ upload_id, chunk_index, total_chunks, chunk }) => {
       pruneExpiredUploadSessions();
 
-      const session = chunkUploadSessions.get(upload_id);
+      let resolvedUploadId = upload_id;
+      let session = chunkUploadSessions.get(upload_id);
+      let uploadIdAutoResolved = false;
+      if (!session) {
+        if (chunkUploadSessions.size === 1) {
+          const firstEntry = chunkUploadSessions.entries().next().value as
+            | [string, ChunkUploadSession]
+            | undefined;
+          if (firstEntry) {
+            resolvedUploadId = firstEntry[0];
+            session = firstEntry[1];
+            uploadIdAutoResolved = true;
+          }
+        }
+      }
+
       if (!session) {
         return createErrorResponse(
           "Session upload introuvable ou expiree. Redemarrez avec start_cv_chunked_generation.",
           "upload_session_not_found",
           {
             upload_id,
+            active_upload_ids: Array.from(chunkUploadSessions.keys()).slice(0, 5),
           },
         );
       }
@@ -506,7 +538,7 @@ export const createCvMcpServer = (): McpServer => {
           `Chunk trop long: maximum ${MAX_CHUNK_CHARS} caracteres.`,
           "chunk_too_large",
           {
-            upload_id,
+            upload_id: resolvedUploadId,
             max_chunk_chars: MAX_CHUNK_CHARS,
             received_chunk_chars: chunk.length,
           },
@@ -518,7 +550,7 @@ export const createCvMcpServer = (): McpServer => {
           "Valeur total_chunks incoherente avec les appels precedents.",
           "total_chunks_mismatch",
           {
-            upload_id,
+            upload_id: resolvedUploadId,
             expected_total_chunks: session.totalChunks,
             received_total_chunks: total_chunks,
           },
@@ -532,7 +564,7 @@ export const createCvMcpServer = (): McpServer => {
           "chunk_index hors limites pour total_chunks.",
           "invalid_chunk_index",
           {
-            upload_id,
+            upload_id: resolvedUploadId,
             chunk_index,
             total_chunks,
           },
@@ -545,7 +577,7 @@ export const createCvMcpServer = (): McpServer => {
           "chunk_index deja utilise avec un contenu different.",
           "chunk_index_conflict",
           {
-            upload_id,
+            upload_id: resolvedUploadId,
             chunk_index,
           },
         );
@@ -556,15 +588,21 @@ export const createCvMcpServer = (): McpServer => {
 
       const receivedChunks = session.chunks.size;
       if (receivedChunks < total_chunks) {
-        return createSuccessResponse("Chunk recu. Session en attente des chunks restants.", {
-          upload_id,
-          upload_completed: false,
-          chunk_index,
-          received_chunks: receivedChunks,
-          total_chunks,
-          remaining_chunks: total_chunks - receivedChunks,
-          next_missing_chunk_index: getFirstMissingChunkIndex(session),
-        });
+        return createSuccessResponse(
+          uploadIdAutoResolved
+            ? `Chunk recu. upload_id resolu automatiquement vers ${resolvedUploadId}. Session en attente des chunks restants.`
+            : "Chunk recu. Session en attente des chunks restants.",
+          {
+            upload_id: resolvedUploadId,
+            upload_id_autocorrected: uploadIdAutoResolved,
+            upload_completed: false,
+            chunk_index,
+            received_chunks: receivedChunks,
+            total_chunks,
+            remaining_chunks: total_chunks - receivedChunks,
+            next_missing_chunk_index: getFirstMissingChunkIndex(session),
+          },
+        );
       }
 
       const orderedChunks: string[] = [];
@@ -576,7 +614,7 @@ export const createCvMcpServer = (): McpServer => {
             "Chunks incomplets: un index est manquant.",
             "missing_chunk",
             {
-              upload_id,
+              upload_id: resolvedUploadId,
               missing_chunk_index: index,
               total_chunks,
             },
@@ -585,12 +623,12 @@ export const createCvMcpServer = (): McpServer => {
 
         totalChars += value.length;
         if (totalChars > MAX_TOTAL_CHUNKED_CV_DATA_CHARS) {
-          chunkUploadSessions.delete(upload_id);
+          chunkUploadSessions.delete(resolvedUploadId);
           return createErrorResponse(
             "Payload chunked trop volumineux.",
             "chunked_payload_too_large",
             {
-              upload_id,
+              upload_id: resolvedUploadId,
               max_total_chars: MAX_TOTAL_CHUNKED_CV_DATA_CHARS,
               received_total_chars: totalChars,
             },
@@ -605,18 +643,18 @@ export const createCvMcpServer = (): McpServer => {
       try {
         parsedCvData = JSON.parse(payloadText) as unknown;
       } catch (error) {
-        chunkUploadSessions.delete(upload_id);
+        chunkUploadSessions.delete(resolvedUploadId);
         return createErrorResponse(
           getErrorMessage(error, "Le JSON reconstruit est invalide."),
           "invalid_chunked_json_payload",
           {
-            upload_id,
+            upload_id: resolvedUploadId,
             total_chars: payloadText.length,
           },
         );
       }
 
-      chunkUploadSessions.delete(upload_id);
+      chunkUploadSessions.delete(resolvedUploadId);
 
       const generationResponse =
         session.outputFormat === "html"
@@ -624,7 +662,8 @@ export const createCvMcpServer = (): McpServer => {
           : await generatePdfFromCvData(parsedCvData, session.pdfMode, session.browserExecutablePath);
 
       return withUploadMetadata(generationResponse, {
-        upload_id,
+        upload_id: resolvedUploadId,
+        upload_id_autocorrected: uploadIdAutoResolved,
         upload_completed: true,
         total_chunks,
         received_chunks: total_chunks,
@@ -686,7 +725,7 @@ export const createCvMcpServer = (): McpServer => {
         "```",
         "",
         "Workflow chunked (gros payloads):",
-        "1) start_cv_chunked_generation",
+        "1) start_cv_chunked_generation (recuperer upload_id exact retourne par le serveur)",
         "2) append_cv_generation_chunk avec chunk_index 0..total_chunks-1 (max 5000 chars/chunk)",
         "3) au dernier chunk, le serveur finalise et genere automatiquement le fichier",
       ].join("\n");

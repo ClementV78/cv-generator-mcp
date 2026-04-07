@@ -141,9 +141,11 @@ test("MCP server enforces 5000-char direct limit and supports chunked PDF genera
       upload_id: string;
       max_chunk_chars: number;
     };
+    const startText = ((startUploadResult.content ?? [])[0] as { text?: string } | undefined)?.text ?? "";
     assert.equal(startPayload.success, true);
     assert.equal(startPayload.max_chunk_chars, 5000);
     assert.equal(startPayload.upload_id.length > 0, true);
+    assert.match(startText, new RegExp(`upload_id: ${startPayload.upload_id}`));
 
     const serializedFixture = JSON.stringify(baseFixture);
     const chunkSize = 1200;
@@ -204,6 +206,61 @@ test("MCP server enforces 5000-char direct limit and supports chunked PDF genera
     assert.match(finalChunkPayload?.file_path ?? "", /cv-template-.*\.pdf$/);
     assert.equal(finalChunkPayload?.total_chunks, totalChunks);
     assert.equal(finalChunkPayload?.received_chunks, totalChunks);
+  } finally {
+    await client.close();
+  }
+});
+
+test("MCP chunk append can auto-resolve upload_id when exactly one session is active", async () => {
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [tsxCliPath, mcpServerPath],
+    cwd: projectRoot,
+    stderr: "pipe",
+  });
+
+  const client = new Client({
+    name: "cv-generator-test-client-upload-autoresolve",
+    version: "0.1.0",
+  });
+
+  try {
+    await client.connect(transport);
+
+    const fixture = await readMinimalFixture();
+    const serializedFixture = JSON.stringify(fixture);
+
+    const startUploadResult = await client.callTool({
+      name: "start_cv_chunked_generation",
+      arguments: {
+        output_format: "html",
+      },
+    });
+    assert.equal((startUploadResult as { isError?: boolean }).isError ?? false, false);
+
+    const appendResult = await client.callTool({
+      name: "append_cv_generation_chunk",
+      arguments: {
+        upload_id: "wrong-upload-id",
+        chunk_index: 0,
+        total_chunks: 1,
+        chunk: serializedFixture,
+      },
+    });
+
+    assert.equal((appendResult as { isError?: boolean }).isError ?? false, false);
+    const payload = appendResult.structuredContent as {
+      success: boolean;
+      upload_completed: boolean;
+      upload_id_autocorrected: boolean;
+      format: string;
+      content: string;
+    };
+    assert.equal(payload.success, true);
+    assert.equal(payload.upload_completed, true);
+    assert.equal(payload.upload_id_autocorrected, true);
+    assert.equal(payload.format, "html");
+    assert.match(payload.content, /cv-sheet/);
   } finally {
     await client.close();
   }

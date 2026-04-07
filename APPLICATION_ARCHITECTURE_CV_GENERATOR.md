@@ -579,8 +579,14 @@ Contrainte :
 
 Cree une session d'upload chunked et retourne un `upload_id`.
 
+Important :
+
+- le client doit reutiliser exactement cet `upload_id` dans `append_cv_generation_chunk`
+- si un mauvais `upload_id` est envoye et qu'une seule session est active, le serveur peut auto-resoudre la session
+
 Parametres :
 
+- `upload_id` (optionnel, identifiant client explicite)
 - `output_format: "pdf" | "html"` (defaut `pdf`)
 - `pdf_mode` (si `output_format = "pdf"`)
 - `browser_executable_path` (optionnel)

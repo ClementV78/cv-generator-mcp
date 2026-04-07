@@ -319,8 +319,14 @@ Limite appel direct :
 
 Ouvre une session chunked et retourne un `upload_id`.
 
+Important :
+
+- reutiliser exactement cet `upload_id` dans `append_cv_generation_chunk`
+- si le client envoie un mauvais `upload_id` et qu'une seule session est active, le serveur tente un auto-rattrapage
+
 Parametres :
 
+- `upload_id` (optionnel, id client explicite)
 - `output_format: "pdf" | "html"` (defaut `pdf`)
 - `pdf_mode: "paginated" | "continuous"` (utilise seulement pour `pdf`)
 - `browser_executable_path` (optionnel)
