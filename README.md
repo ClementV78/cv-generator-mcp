@@ -24,6 +24,11 @@ Tools MCP publics :
 - `validate_cv`
 - `get_cv_schema`
 
+Tools MCP additionnels (workflow gros payloads) :
+
+- `start_cv_chunked_generation`
+- `append_cv_generation_chunk`
+
 ## Trois usages
 
 ### 1. Usage local humain
@@ -44,6 +49,7 @@ Serveur MCP local pour :
 - generer du HTML
 - generer du PDF `paginated | continuous`
 - recuperer le schema JSON
+- generer en mode chunked quand `cv_data` depasse 5000 caracteres
 
 Important :
 
@@ -292,12 +298,48 @@ Valide un `CvData`, normalise l'entree et retourne :
 
 Genere le HTML final du CV sans chrome d'edition.
 
+Limite appel direct :
+
+- `cv_data` stringify <= `5000` caracteres
+- sinon, utiliser le workflow chunked
+
 ### `generate_cv_pdf`
 
 Genere un PDF via `Vivliostyle` a partir du HTML/CSS du template :
 
 - `pdf_mode: "paginated"` pour un CV classique
 - `pdf_mode: "continuous"` pour un export monobloc plus oriente lecture ecran
+
+Limite appel direct :
+
+- `cv_data` stringify <= `5000` caracteres
+- sinon, utiliser le workflow chunked
+
+### `start_cv_chunked_generation`
+
+Ouvre une session chunked et retourne un `upload_id`.
+
+Parametres :
+
+- `output_format: "pdf" | "html"` (defaut `pdf`)
+- `pdf_mode: "paginated" | "continuous"` (utilise seulement pour `pdf`)
+- `browser_executable_path` (optionnel)
+
+### `append_cv_generation_chunk`
+
+Ajoute un fragment JSON a une session chunked.
+
+Parametres :
+
+- `upload_id`
+- `chunk_index` (0-based)
+- `total_chunks`
+- `chunk` (<= `5000` caracteres)
+
+Comportement :
+
+- tant que tous les chunks ne sont pas recus: reponse `upload_completed: false`
+- au dernier chunk: reassemblage JSON + validation + generation automatique (`html` ou `pdf`)
 
 Notes utiles :
 
@@ -307,6 +349,19 @@ Notes utiles :
 - `browser_executable_path` reste disponible en override optionnel si l'environnement headless local est incomplet
 - le premier rendu PDF peut etre plus lent, le temps que le runtime headless soit pret
 - le choix de ce backend implique aussi de surveiller sa licence et son impact de distribution
+
+## Limite de taille pour la generation MCP
+
+Pour `generate_cv_html` et `generate_cv_pdf` :
+
+- le serveur refuse les appels directs si `JSON.stringify(cv_data).length > 5000`
+- code d'erreur : `cv_data_too_large_for_single_call`
+
+Workflow recommande pour les gros CV :
+
+1. `start_cv_chunked_generation`
+2. `append_cv_generation_chunk` pour chaque fragment (`chunk_index` de `0` a `total_chunks - 1`)
+3. le serveur finalise automatiquement au dernier chunk
 
 ## Comportement en cas de depassement de pages
 

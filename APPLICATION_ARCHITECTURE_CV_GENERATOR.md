@@ -525,10 +525,17 @@ Le serveur :
 
 ## Tools Exposes
 
+Surface stable beta :
+
 - `generate_cv_html`
 - `generate_cv_pdf`
 - `validate_cv`
 - `get_cv_schema`
+
+Tools additionnels pour gros payloads :
+
+- `start_cv_chunked_generation`
+- `append_cv_generation_chunk`
 
 ## Semantique des tools
 
@@ -549,6 +556,11 @@ Normalise et valide un `CvData`, puis retourne :
 
 Genere le rendu HTML final a partir d'un `CvData` valide.
 
+Contrainte :
+
+- appel direct accepte seulement si `JSON.stringify(cv_data).length <= 5000`
+- sinon erreur `cv_data_too_large_for_single_call` et bascule vers workflow chunked
+
 ### `generate_cv_pdf`
 
 Genere le rendu PDF final a partir d'un `CvData` valide.
@@ -558,6 +570,33 @@ Le tool supporte 2 modes :
 - `paginated`
 - `continuous`
 
+Contrainte :
+
+- appel direct accepte seulement si `JSON.stringify(cv_data).length <= 5000`
+- sinon erreur `cv_data_too_large_for_single_call` et bascule vers workflow chunked
+
+### `start_cv_chunked_generation`
+
+Cree une session d'upload chunked et retourne un `upload_id`.
+
+Parametres :
+
+- `output_format: "pdf" | "html"` (defaut `pdf`)
+- `pdf_mode` (si `output_format = "pdf"`)
+- `browser_executable_path` (optionnel)
+
+### `append_cv_generation_chunk`
+
+Ajoute un chunk de JSON dans une session:
+
+- `chunk_index` 0-based
+- `total_chunks` constant sur toute la session
+- `chunk` limite a 5000 caracteres
+
+Auto-finalisation :
+
+- quand tous les chunks sont recus, le serveur reassemble le JSON, valide et genere automatiquement l'artefact cible
+
 ## Flux MCP
 
 ```mermaid
@@ -566,11 +605,23 @@ sequenceDiagram
     participant Server as MCP Server
     participant Engine as CV Engine
 
-    Client->>Server: callTool(generate_cv_pdf, payload)
-    Server->>Engine: validateCvInput(payload.cv_data)
-    Server->>Engine: generateCvArtifact(format=pdf)
-    Engine-->>Server: PDF + metadata
-    Server-->>Client: structured response
+    alt payload <= 5000 chars
+      Client->>Server: callTool(generate_cv_pdf, cv_data)
+      Server->>Engine: validateCvInput(payload.cv_data)
+      Server->>Engine: generateCvArtifact(format=pdf)
+      Engine-->>Server: PDF + metadata
+      Server-->>Client: structured response
+    else payload > 5000 chars
+      Client->>Server: callTool(start_cv_chunked_generation)
+      Server-->>Client: upload_id
+      loop 0..total_chunks-1
+        Client->>Server: callTool(append_cv_generation_chunk, chunk_i)
+      end
+      Server->>Engine: validateCvInput(reassembled_cv_data)
+      Server->>Engine: generateCvArtifact(format=pdf|html)
+      Engine-->>Server: artifact + metadata
+      Server-->>Client: final structured response
+    end
 ```
 
 ## Comportement du serveur
@@ -662,6 +713,8 @@ Verifier :
 - schema
 - generation HTML
 - generation PDF continue
+- limite 5000 chars en appel direct
+- workflow chunked avec auto-finalisation
 
 ### CLI
 

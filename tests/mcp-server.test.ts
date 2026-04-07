@@ -41,6 +41,8 @@ test("MCP server exposes the expected tools and serves schema/html generation", 
     assert(toolNames.includes("generate_cv_pdf"));
     assert(toolNames.includes("validate_cv"));
     assert(toolNames.includes("get_cv_schema"));
+    assert(toolNames.includes("start_cv_chunked_generation"));
+    assert(toolNames.includes("append_cv_generation_chunk"));
 
     const schemaResult = await client.callTool({
       name: "get_cv_schema",
@@ -86,6 +88,122 @@ test("MCP server exposes the expected tools and serves schema/html generation", 
     assert.equal(pdfStructuredContent.format, "pdf");
     assert.equal(pdfStructuredContent.pdf_mode, "continuous");
     assert.match(pdfStructuredContent.file_path, /cv-template-.*\.pdf$/);
+  } finally {
+    await client.close();
+  }
+});
+
+test("MCP server enforces 5000-char direct limit and supports chunked PDF generation", async () => {
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [tsxCliPath, mcpServerPath],
+    cwd: projectRoot,
+    stderr: "pipe",
+  });
+
+  const client = new Client({
+    name: "cv-generator-test-client-chunked",
+    version: "0.1.0",
+  });
+
+  try {
+    await client.connect(transport);
+
+    const baseFixture = await readMinimalFixture();
+    const largeFixture = JSON.parse(JSON.stringify(baseFixture)) as Record<string, unknown>;
+    largeFixture.profile = "A".repeat(6_200);
+
+    const oversizedResult = await client.callTool({
+      name: "generate_cv_pdf",
+      arguments: {
+        cv_data: largeFixture,
+        pdf_mode: "continuous",
+      },
+    });
+
+    assert.equal((oversizedResult as { isError?: boolean }).isError ?? false, true);
+    assert.equal(
+      (oversizedResult.structuredContent as { error_code?: string }).error_code,
+      "cv_data_too_large_for_single_call",
+    );
+
+    const startUploadResult = await client.callTool({
+      name: "start_cv_chunked_generation",
+      arguments: {
+        output_format: "pdf",
+        pdf_mode: "continuous",
+      },
+    });
+
+    assert.equal((startUploadResult as { isError?: boolean }).isError ?? false, false);
+    const startPayload = startUploadResult.structuredContent as {
+      success: boolean;
+      upload_id: string;
+      max_chunk_chars: number;
+    };
+    assert.equal(startPayload.success, true);
+    assert.equal(startPayload.max_chunk_chars, 5000);
+    assert.equal(startPayload.upload_id.length > 0, true);
+
+    const serializedFixture = JSON.stringify(baseFixture);
+    const chunkSize = 1200;
+    const totalChunks = Math.ceil(serializedFixture.length / chunkSize);
+
+    let finalChunkPayload:
+      | {
+          success: boolean;
+          upload_completed: boolean;
+          format: string;
+          pdf_mode: string;
+          file_path: string;
+          total_chunks: number;
+          received_chunks: number;
+        }
+      | null = null;
+
+    for (let index = 0; index < totalChunks; index += 1) {
+      const chunk = serializedFixture.slice(index * chunkSize, (index + 1) * chunkSize);
+      const appendResult = await client.callTool({
+        name: "append_cv_generation_chunk",
+        arguments: {
+          upload_id: startPayload.upload_id,
+          chunk_index: index,
+          total_chunks: totalChunks,
+          chunk,
+        },
+      });
+
+      assert.equal((appendResult as { isError?: boolean }).isError ?? false, false);
+      const appendPayload = appendResult.structuredContent as {
+        success: boolean;
+        upload_completed: boolean;
+      };
+      assert.equal(appendPayload.success, true);
+
+      if (index < totalChunks - 1) {
+        assert.equal(appendPayload.upload_completed, false);
+      } else {
+        const finalPayload = appendResult.structuredContent as {
+          success: boolean;
+          upload_completed: boolean;
+          format: string;
+          pdf_mode: string;
+          file_path: string;
+          total_chunks: number;
+          received_chunks: number;
+        };
+        finalChunkPayload = finalPayload;
+      }
+    }
+
+    assert.notEqual(finalChunkPayload, null);
+    assert.equal(finalChunkPayload?.success, true);
+    assert.equal(finalChunkPayload?.upload_completed, true);
+    assert.equal(finalChunkPayload?.format, "pdf");
+    assert.equal(finalChunkPayload?.pdf_mode, "continuous");
+    assert.match(finalChunkPayload?.file_path ?? "", /cv-template-.*\.pdf$/);
+    assert.equal(finalChunkPayload?.total_chunks, totalChunks);
+    assert.equal(finalChunkPayload?.received_chunks, totalChunks);
   } finally {
     await client.close();
   }
