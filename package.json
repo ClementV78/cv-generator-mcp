@@ -4,7 +4,7 @@
   "description": "Local MCP server and skill bundle for generating and validating CvData-based resumes.",
   "type": "module",
   "bin": {
-    "cv-generator-mcp": "./bin/cv-generator-mcp.mjs"
+    "cv-generator-mcp": "bin/cv-generator-mcp.mjs"
   },
   "files": [
     "bin",
