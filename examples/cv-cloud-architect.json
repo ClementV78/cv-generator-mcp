@@ -115,6 +115,7 @@
     "mode": "preview",
     "maxPages": 2,
     "theme": "graphite",
-    "sidebarPosition": "left"
+    "sidebarPosition": "left",
+    "language": "french"
   }
 }

@@ -5,6 +5,7 @@ import { presets, type PresetKey } from "./data/presets";
 import { hydrateQrPlaceholders } from "./engine/qr";
 import { measurePreviewValidation } from "./engine/validationBrowser";
 import { renderCvHtmlDocument } from "./engine/renderHtml";
+import { getCvLanguageCopy, normalizeCvLanguage } from "./i18n";
 import { sampleCv } from "./data/sampleCv";
 import {
   addItemAtPath,
@@ -145,7 +146,7 @@ const printHtmlDocument = (html: string): void => {
 
 const getPreferredEnvironmentLabel = (state: CvData): string =>
   state.experiences.find((experience) => experience.techEnvironmentLabel.trim())?.techEnvironmentLabel ??
-  "Environnement technique";
+  getCvLanguageCopy(state.render.language).defaults.techEnvironmentLabel;
 
 const rerender = (state: CvData): void => {
   currentValidation = measurePreviewValidation(state);
@@ -292,18 +293,19 @@ app.addEventListener("click", async (event) => {
       return;
     }
 
-    let item = createItemFromFactory(factory);
+    const copy = getCvLanguageCopy(state.render.language);
+    let item = createItemFromFactory(factory, state.render.language);
 
     if (factory === "experience") {
       item = {
         id: createId("experience"),
-        company: "Nouvelle entreprise",
-        role: "Nouveau rôle",
+        company: copy.defaults.newExperienceCompany,
+        role: copy.defaults.newExperienceRole,
         period: "2025",
-        subtitle: "Projet / périmètre",
-        bullets: [createTextItem("Décrire la mission et la contribution principale.")],
+        subtitle: copy.defaults.newExperienceSubtitle,
+        bullets: [createTextItem(copy.defaults.newExperienceBullet)],
         techEnvironmentLabel: getPreferredEnvironmentLabel(state),
-        techEnvironment: "Technologies à préciser",
+        techEnvironment: copy.defaults.technologiesToSpecify,
         projects: [],
       };
     }
@@ -318,11 +320,11 @@ app.addEventListener("click", async (event) => {
 
       item = {
         id: createId("project"),
-        title: "Nouveau projet",
+        title: copy.defaults.newProjectTitle,
         period: "2025",
-        bullets: [createTextItem("Décrire le périmètre et la contribution.")],
+        bullets: [createTextItem(copy.defaults.newProjectBullet)],
         techEnvironmentLabel: inheritedLabel,
-        techEnvironment: "Technologies à préciser",
+        techEnvironment: copy.defaults.technologiesToSpecify,
       };
     }
 
@@ -453,6 +455,14 @@ app.addEventListener("change", (event) => {
         value === "cyber-purple"
           ? value
           : "ocean";
+    });
+    return;
+  }
+
+  if (action === "set-language" && target instanceof HTMLSelectElement) {
+    const value = normalizeCvLanguage(target.value, "english");
+    store.update((draft) => {
+      draft.render.language = value;
     });
     return;
   }

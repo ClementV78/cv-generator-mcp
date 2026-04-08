@@ -1,4 +1,5 @@
 import { LIMITS } from "./constants";
+import { getCvLanguageCopy } from "./i18n";
 import { canAddFactory } from "./model";
 import type {
   CardIcon,
@@ -112,9 +113,10 @@ const renderBullet = (
   path: string,
   index: number,
   interactive: boolean,
+  bulletLabel: string,
 ): string => `
   <li class="bullet-item">
-    ${renderEditableText(item.text, `${path}.${index}.text`, interactive, LIMITS.bulletLines, "Bullet point")}
+    ${renderEditableText(item.text, `${path}.${index}.text`, interactive, LIMITS.bulletLines, bulletLabel)}
     ${renderToolbarButtons(path, index, interactive)}
   </li>
 `;
@@ -206,6 +208,8 @@ const renderSidebarCard = (
   interactive: boolean,
   titleLines: number,
   titleLabel: string,
+  secondaryLabel: string,
+  metadataLabel: string,
   activeCardIconMenu?: string | null,
 ): string => `
   <div class="sidebar-card">
@@ -252,13 +256,11 @@ const renderSidebarCard = (
         `${path}.${index}.subtitle`,
         interactive,
         LIMITS.certificationMetaLines,
-        "Libellé secondaire",
+        secondaryLabel,
         "card-meta",
       )}
       ${
-        item.meta
-          ? renderEditableText(item.meta, `${path}.${index}.meta`, interactive, 1, "Méta", "card-meta soft")
-          : ""
+        item.meta ? renderEditableText(item.meta, `${path}.${index}.meta`, interactive, 1, metadataLabel, "card-meta soft") : ""
       }
     </div>
     <div class="card-controls ${controlClass(interactive)}">
@@ -272,10 +274,11 @@ const renderLanguageCard = (
   path: string,
   index: number,
   interactive: boolean,
+  copy: ReturnType<typeof getCvLanguageCopy>,
 ): string => `
   <div class="language-card">
-    ${renderEditableText(item.title, `${path}.${index}.title`, interactive, 1, "Nom de langue")}
-    ${renderEditableText(item.subtitle, `${path}.${index}.subtitle`, interactive, LIMITS.languageLines, "Niveau de langue", "card-meta")}
+    ${renderEditableText(item.title, `${path}.${index}.title`, interactive, 1, copy.defaults.newLanguageTitle)}
+    ${renderEditableText(item.subtitle, `${path}.${index}.subtitle`, interactive, LIMITS.languageLines, copy.labelLanguageLevel, "card-meta")}
     ${renderToolbarButtons(path, index, interactive)}
   </div>
 `;
@@ -285,26 +288,29 @@ const renderProject = (
   experienceIndex: number,
   projectIndex: number,
   interactive: boolean,
+  copy: ReturnType<typeof getCvLanguageCopy>,
 ): string => {
   const projectPath = `experiences.${experienceIndex}.projects.${projectIndex}`;
   const bulletsPath = `${projectPath}.bullets`;
 
   return `
     <div class="project-card">
-      <div class="project-header">
+        <div class="project-header">
         ${renderEditableText(project.title, `${projectPath}.title`, interactive, undefined, undefined, "project-title")}
-        ${renderEditableText(project.period, `${projectPath}.period`, interactive, 1, "Période", "project-period")}
+        ${renderEditableText(project.period, `${projectPath}.period`, interactive, 1, copy.labelPeriod, "project-period")}
         ${renderToolbarButtons(`experiences.${experienceIndex}.projects`, projectIndex, interactive)}
       </div>
       <ul class="bullet-list">
-        ${project.bullets.map((bullet, bulletIndex) => renderBullet(bullet, bulletsPath, bulletIndex, interactive)).join("")}
+        ${project.bullets
+          .map((bullet, bulletIndex) => renderBullet(bullet, bulletsPath, bulletIndex, interactive, copy.labelBulletPoint))
+          .join("")}
       </ul>
       <div class="inline-actions ${controlClass(interactive)}">
         <button type="button" data-action="add-item" data-path="${bulletsPath}" data-factory="bullet">+ Bullet</button>
       </div>
       <div class="tech-box">
-        <strong>${renderEditableText(project.techEnvironmentLabel, `${projectPath}.techEnvironmentLabel`, interactive, 1, "Libellé environnement", "inline-edit")} :</strong>
-        ${renderEditableText(project.techEnvironment, `${projectPath}.techEnvironment`, interactive, LIMITS.techEnvironmentLines, "Environnement technique", "inline-edit")}
+        <strong>${renderEditableText(project.techEnvironmentLabel, `${projectPath}.techEnvironmentLabel`, interactive, 1, copy.defaults.techEnvironmentLabel, "inline-edit")} :</strong>
+        ${renderEditableText(project.techEnvironment, `${projectPath}.techEnvironment`, interactive, LIMITS.techEnvironmentLines, copy.defaults.techEnvironmentLabel, "inline-edit")}
       </div>
     </div>
   `;
@@ -315,6 +321,7 @@ const renderExperience = (
   index: number,
   state: CvData,
   interactive: boolean,
+  copy: ReturnType<typeof getCvLanguageCopy>,
 ): string => {
   const experiencePath = `experiences.${index}`;
   const bulletsPath = `${experiencePath}.bullets`;
@@ -327,14 +334,16 @@ const renderExperience = (
         <div class="experience-header">
           <div class="experience-title-line">
             ${renderEditableText(experience.role, `${experiencePath}.role`, interactive, undefined, undefined, "experience-role")}
-            ${renderEditableText(experience.company, `${experiencePath}.company`, interactive, 1, "Entreprise", "experience-company")}
+            ${renderEditableText(experience.company, `${experiencePath}.company`, interactive, 1, copy.labelCompany, "experience-company")}
           </div>
-          ${renderEditableText(experience.period, `${experiencePath}.period`, interactive, 1, "Période", "experience-period")}
+          ${renderEditableText(experience.period, `${experiencePath}.period`, interactive, 1, copy.labelPeriod, "experience-period")}
           ${renderToolbarButtons("experiences", index, interactive)}
         </div>
-        ${renderEditableText(experience.subtitle, `${experiencePath}.subtitle`, interactive, 2, "Sous-titre d'expérience", "experience-subtitle")}
+        ${renderEditableText(experience.subtitle, `${experiencePath}.subtitle`, interactive, 2, copy.labelExperienceSubtitle, "experience-subtitle")}
         <ul class="bullet-list">
-          ${experience.bullets.map((bullet, bulletIndex) => renderBullet(bullet, bulletsPath, bulletIndex, interactive)).join("")}
+          ${experience.bullets
+            .map((bullet, bulletIndex) => renderBullet(bullet, bulletsPath, bulletIndex, interactive, copy.labelBulletPoint))
+            .join("")}
         </ul>
         <div class="inline-actions ${controlClass(interactive)}">
           <button
@@ -354,12 +363,12 @@ const renderExperience = (
         </div>
         ${
           experience.projects.length > 0
-            ? `<div class="project-list">${experience.projects.map((project, projectIndex) => renderProject(project, index, projectIndex, interactive)).join("")}</div>`
+            ? `<div class="project-list">${experience.projects.map((project, projectIndex) => renderProject(project, index, projectIndex, interactive, copy)).join("")}</div>`
             : ""
         }
         <div class="tech-box">
-          <strong>${renderEditableText(experience.techEnvironmentLabel, `${experiencePath}.techEnvironmentLabel`, interactive, 1, "Libellé environnement", "inline-edit")} :</strong>
-          ${renderEditableText(experience.techEnvironment, `${experiencePath}.techEnvironment`, interactive, LIMITS.techEnvironmentLines, "Environnement technique", "inline-edit")}
+          <strong>${renderEditableText(experience.techEnvironmentLabel, `${experiencePath}.techEnvironmentLabel`, interactive, 1, copy.defaults.techEnvironmentLabel, "inline-edit")} :</strong>
+          ${renderEditableText(experience.techEnvironment, `${experiencePath}.techEnvironment`, interactive, LIMITS.techEnvironmentLines, copy.defaults.techEnvironmentLabel, "inline-edit")}
         </div>
       </div>
     </article>
@@ -465,6 +474,14 @@ export const renderApp = (state: CvData, options: RenderOptions): string => {
             </select>
           </label>
           <label class="toolbar-field">
+            <span>CV language</span>
+            <select data-action="set-language">
+              <option value="english" ${state.render.language === "english" ? "selected" : ""}>English</option>
+              <option value="french" ${state.render.language === "french" ? "selected" : ""}>Français</option>
+              <option value="spanish" ${state.render.language === "spanish" ? "selected" : ""}>Español</option>
+            </select>
+          </label>
+          <label class="toolbar-field">
             <span>Format export</span>
             <select data-action="set-export-format">
               <option value="html" ${selectedExportFormat === "html" ? "selected" : ""}>Export HTML</option>
@@ -497,6 +514,7 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
   const { interactive, activeCardIconMenu = null, qrCodeMarkup = null } = options;
   const themeClass = `theme-${state.render.theme}`;
   const sidebarClass = state.render.sidebarPosition === "right" ? "sidebar-right" : "sidebar-left";
+  const copy = getCvLanguageCopy(state.render.language);
   const sidebarToggleArrow = state.render.sidebarPosition === "right" ? "&larr;" : "&rarr;";
   const sidebarToggleTitle =
     state.render.sidebarPosition === "right"
@@ -517,14 +535,14 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
               >${sidebarToggleArrow}</button>
             </div>
             <div class="cv-badge">
-              ${renderEditableText(state.header.badgeText, "header.badgeText", interactive, 2, "Texte du badge", "badge-text")}
+              ${renderEditableText(state.header.badgeText, "header.badgeText", interactive, 2, copy.labelBadgeText, "badge-text")}
             </div>
 
           <section class="contact-list">
-            ${renderEditableText(state.header.location, "header.location", interactive, 2, "Localisation", "contact-item")}
+            ${renderEditableText(state.header.location, "header.location", interactive, 2, copy.labelLocation, "contact-item")}
             ${renderEditableText(state.header.email, "header.email", interactive, 2, "Email", "contact-item")}
             ${renderEditableText(state.header.linkedin, "header.linkedin", interactive, 2, "LinkedIn", "contact-item")}
-            ${renderEditableText(state.header.availabilityText, "header.availabilityText", interactive, 3, "Disponibilité", "contact-item")}
+            ${renderEditableText(state.header.availabilityText, "header.availabilityText", interactive, 3, copy.labelAvailability, "contact-item")}
           </section>
 
           ${
@@ -539,8 +557,8 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
                       ? `<div class="qr-placeholder" aria-label="QR code">${qrCodeMarkup}</div>`
                       : `<div class="qr-placeholder" data-qr-url="${escapeHtml(state.header.qrCodeUrl).replace(/"/g, "&quot;")}" aria-label="QR code"></div>`
                   }
-                  ${renderEditableText(state.header.qrCodeLabel, "header.qrCodeLabel", interactive, 1, "Label QR", "qr-label")}
-                  ${renderEditableText(state.header.qrCodeUrl, "header.qrCodeUrl", interactive, 2, "URL du QR code", `qr-url ${controlClass(interactive)}`)}
+                  ${renderEditableText(state.header.qrCodeLabel, "header.qrCodeLabel", interactive, 1, copy.labelQrCode, "qr-label")}
+                  ${renderEditableText(state.header.qrCodeUrl, "header.qrCodeUrl", interactive, 2, copy.labelQrCodeUrl, `qr-url ${controlClass(interactive)}`)}
                 </section>
               `
               : `
@@ -555,7 +573,7 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
 
           <section class="sidebar-section">
             ${renderSectionHeader(
-              "Compétences",
+              copy.sectionSkills,
               interactive,
               undefined,
               undefined,
@@ -571,13 +589,13 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
           </section>
 
           <section class="sidebar-section">
-            ${renderSectionHeader("Highlights", interactive, "highlights", "highlight", canAddFactory(state, "highlights", "highlight"))}
+            ${renderSectionHeader(copy.sectionHighlights, interactive, "highlights", "highlight", canAddFactory(state, "highlights", "highlight"))}
             <div class="stacked-list">
               ${state.highlights
                 .map(
                   (item, index) => `
                     <div class="highlight-card">
-                      ${renderEditableText(item.text, `highlights.${index}.text`, interactive, LIMITS.highlightLines, "Highlight")}
+                      ${renderEditableText(item.text, `highlights.${index}.text`, interactive, LIMITS.highlightLines, copy.sectionHighlights)}
                       ${renderToolbarButtons("highlights", index, interactive)}
                     </div>
                   `,
@@ -587,42 +605,70 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
           </section>
 
           <section class="sidebar-section">
-            ${renderSectionHeader("Certifications", interactive, "certifications", "certification", canAddFactory(state, "certifications", "certification"))}
+            ${renderSectionHeader(copy.sectionCertifications, interactive, "certifications", "certification", canAddFactory(state, "certifications", "certification"))}
             <div class="stacked-list">
-              ${state.certifications.map((item, index) => renderSidebarCard(item, "certifications", index, interactive, LIMITS.certificationTitleLines, "Certification", activeCardIconMenu)).join("")}
+              ${state.certifications
+                .map((item, index) =>
+                  renderSidebarCard(
+                    item,
+                    "certifications",
+                    index,
+                    interactive,
+                    LIMITS.certificationTitleLines,
+                    copy.sectionCertifications,
+                    copy.labelSecondary,
+                    copy.labelMetadata,
+                    activeCardIconMenu,
+                  ),
+                )
+                .join("")}
             </div>
           </section>
 
           <section class="sidebar-section">
-            ${renderSectionHeader("Formations", interactive, "formations", "formation", true)}
+            ${renderSectionHeader(copy.sectionFormations, interactive, "formations", "formation", true)}
             <div class="stacked-list">
-              ${state.formations.map((item, index) => renderSidebarCard(item, "formations", index, interactive, 2, "Formation", activeCardIconMenu)).join("")}
+              ${state.formations
+                .map((item, index) =>
+                  renderSidebarCard(
+                    item,
+                    "formations",
+                    index,
+                    interactive,
+                    2,
+                    copy.sectionFormations,
+                    copy.labelSecondary,
+                    copy.labelMetadata,
+                    activeCardIconMenu,
+                  ),
+                )
+                .join("")}
             </div>
           </section>
 
           <section class="sidebar-section">
-            ${renderSectionHeader("Langues", interactive, "languages", "language", canAddFactory(state, "languages", "language"))}
+            ${renderSectionHeader(copy.sectionLanguages, interactive, "languages", "language", canAddFactory(state, "languages", "language"))}
             <div class="stacked-list">
-              ${state.languages.map((item, index) => renderLanguageCard(item, "languages", index, interactive)).join("")}
+              ${state.languages.map((item, index) => renderLanguageCard(item, "languages", index, interactive, copy)).join("")}
             </div>
           </section>
         </aside>
 
         <main class="main-column">
           <header class="hero">
-            ${renderEditableText(state.header.name, "header.name", interactive, 2, "Nom", "hero-name")}
-            ${renderEditableText(state.header.headline, "header.headline", interactive, 3, "Titre principal", "hero-headline")}
+            ${renderEditableText(state.header.name, "header.name", interactive, 2, copy.labelName, "hero-name")}
+            ${renderEditableText(state.header.headline, "header.headline", interactive, 3, copy.labelHeadline, "hero-headline")}
           </header>
 
           <section class="profile-box">
-            <strong>${renderEditableText(state.profileLabel, "profileLabel", interactive, 1, "Label profil", "inline-edit")} :</strong>
-            ${renderEditableText(state.profile, "profile", interactive, LIMITS.profileLines, "Profil professionnel", "profile-text")}
+            <strong>${renderEditableText(state.profileLabel, "profileLabel", interactive, 1, copy.defaults.profileLabel, "inline-edit")} :</strong>
+            ${renderEditableText(state.profile, "profile", interactive, LIMITS.profileLines, copy.labelProfileText, "profile-text")}
           </section>
 
           <section class="experience-section">
-            ${renderSectionHeader("Expériences professionnelles et projets", interactive, "experiences", "experience", canAddFactory(state, "experiences", "experience"))}
+            ${renderSectionHeader(copy.sectionExperienceAndProjects, interactive, "experiences", "experience", canAddFactory(state, "experiences", "experience"))}
             <div class="experience-timeline">
-              ${state.experiences.map((experience, index) => renderExperience(experience, index, state, interactive)).join("")}
+              ${state.experiences.map((experience, index) => renderExperience(experience, index, state, interactive, copy)).join("")}
             </div>
           </section>
 
@@ -631,12 +677,12 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
                   ? `
                 <section class="main-education">
                   <div class="section-heading">
-                    <h2>${renderEditableText(state.mainEducation.title, "mainEducation.title", interactive, 1, "Titre formation", "inline-edit")}</h2>
+                    <h2>${renderEditableText(state.mainEducation.title, "mainEducation.title", interactive, 1, copy.labelMainEducationTitle, "inline-edit")}</h2>
                     <div class="section-actions ${controlClass(interactive)}">
                       <button type="button" data-action="toggle-main-education">Supprimer l'encart</button>
                     </div>
                   </div>
-                  ${renderEditableText(state.mainEducation.summary, "mainEducation.summary", interactive, 5, "Formation principale", "education-summary", true)}
+                  ${renderEditableText(state.mainEducation.summary, "mainEducation.summary", interactive, 5, copy.labelMainEducationSummary, "education-summary", true)}
                 </section>
               `
               : `

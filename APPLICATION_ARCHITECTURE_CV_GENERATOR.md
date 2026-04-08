@@ -135,6 +135,7 @@ The web UI is used for human CV editing.
 It supports:
 
 - inline content editing
+- CV language selection (`english | french | spanish`)
 - theme selection
 - sidebar position selection
 - JSON and HTML import / export
@@ -270,6 +271,7 @@ classDiagram
       +1|2|3|null maxPages
       +CvTheme theme
       +SidebarPosition sidebarPosition
+      +CvLanguage language
     }
 
     class Experience {
@@ -475,6 +477,7 @@ Examples:
 - `cv_data.render.theme`
 - `cv_data.render.sidebarPosition`
 - `cv_data.render.maxPages`
+- `cv_data.render.language`
 - `generate_cv_pdf.pdf_mode`
 - `generate_cv_pdf.browser_executable_path` (optional)
 - `validate_cv.browser_executable_path` (optional)
@@ -482,6 +485,7 @@ Examples:
 
 Important:
 
+- schema keys remain in English regardless of the visible CV language
 - `pageCount` is not a business field of `CvData`
 - it is a computed metric produced by the engine
 
@@ -889,7 +893,7 @@ npm run dev
 
 Current status:
 
-- `npm run build` exists but still fails until the TypeScript errors in `src/cli/cvCli.ts` are fixed
+- `npm run build` is green again
 - this does not block MCP tests or local `npx` packaging
 
 ```bash

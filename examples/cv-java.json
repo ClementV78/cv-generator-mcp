@@ -92,6 +92,7 @@
     "mode": "preview",
     "maxPages": 2,
     "theme": "claude",
-    "sidebarPosition": "left"
+    "sidebarPosition": "left",
+    "language": "french"
   }
 }

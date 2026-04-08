@@ -36,6 +36,7 @@ Additional MCP tools for large payload workflows:
 The web editor supports:
 
 - editing content
+- choosing the CV language (`english | french | spanish`)
 - choosing the theme
 - configuring the sidebar
 - importing / exporting JSON
@@ -165,7 +166,7 @@ npm run dev
 
 Current status:
 
-- `npm run build` exists but still fails because of TypeScript errors in `src/cli/cvCli.ts`
+- `npm run build` is green again
 - local MCP packaging, tests, and the `npx` launcher are valid
 
 ```bash
@@ -263,7 +264,8 @@ The main input contract remains `CvData`.
 The main rules to remember are:
 
 - business and render settings live inside `cv_data`
-- `theme`, `sidebarPosition`, and `maxPages` live inside `cv_data.render`
+- `theme`, `sidebarPosition`, `maxPages`, and `language` live inside `cv_data.render`
+- schema keys remain in English regardless of the visible CV language
 - `pdf_mode` and `browser_executable_path` (optional) are MCP execution parameters, not business fields of the CV
 
 Example:
@@ -274,7 +276,8 @@ Example:
     "render": {
       "theme": "ocean",
       "sidebarPosition": "left",
-      "maxPages": 2
+      "maxPages": 2,
+      "language": "english"
     }
   },
   "pdf_mode": "paginated"
@@ -319,7 +322,8 @@ The MCP client sends:
       "mode": "preview",
       "maxPages": 2,
       "theme": "ocean",
-      "sidebarPosition": "left"
+      "sidebarPosition": "left",
+      "language": "english"
     }
   }
 }

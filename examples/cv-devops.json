@@ -95,6 +95,7 @@
     "mode": "preview",
     "maxPages": 2,
     "theme": "ocean",
-    "sidebarPosition": "left"
+    "sidebarPosition": "left",
+    "language": "french"
   }
 }

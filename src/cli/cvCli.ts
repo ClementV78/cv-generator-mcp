@@ -247,6 +247,7 @@ const printError = (message: string, code = "cli_error", details: Record<string,
     ...details,
   });
   process.exit(1);
+  throw new Error("CLI exited");
 };
 
 const assertCommand = (command: string | undefined): CommandName => {
@@ -271,9 +272,13 @@ const parsePdfMode = (value: string | undefined): PdfMode => {
   if (value === "paginated" || value === "continuous") {
     return value;
   }
-  printError("Valeur invalide pour pdf_mode. Valeurs attendues: paginated | continuous.", "invalid_pdf_mode", {
-    received: value,
-  });
+  return printError(
+    "Valeur invalide pour pdf_mode. Valeurs attendues: paginated | continuous.",
+    "invalid_pdf_mode",
+    {
+      received: value,
+    },
+  );
 };
 
 const getCvDataPath = (args: ParsedArgs): string =>
@@ -331,7 +336,7 @@ const runGenerateCvHtml = async (args: ParsedArgs): Promise<void> => {
 
   const artifact = await generateCvArtifact(validation.cvData, { format: "html" });
   if (artifact.format !== "html") {
-    printError("Le moteur a retourne un format HTML inattendu.", "unexpected_artifact_format");
+    return printError("Le moteur a retourne un format HTML inattendu.", "unexpected_artifact_format");
   }
 
   const filePath = await writeTextArtifact(artifact.content, artifact.fileName, output);
@@ -380,7 +385,7 @@ const runGenerateCvPdf = async (args: ParsedArgs): Promise<void> => {
     },
   });
   if (artifact.format !== "pdf") {
-    printError("Le moteur a retourne un format PDF inattendu.", "unexpected_artifact_format");
+    return printError("Le moteur a retourne un format PDF inattendu.", "unexpected_artifact_format");
   }
 
   const filePath = await writePdfArtifact(artifact.binaryContent, artifact.fileName, output);

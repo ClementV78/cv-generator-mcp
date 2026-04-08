@@ -122,7 +122,7 @@ export const presets: Record<PresetKey, CvData> = {
       title: "Formation",
       summary: "Master informatique et certifications Cloud. Formation continue autour d'AWS, Terraform et securite.",
     },
-    render: { mode: "edit", maxPages: 2, theme: "ocean", sidebarPosition: "left" },
+    render: { mode: "edit", maxPages: 2, theme: "ocean", sidebarPosition: "left", language: "french" },
   }),
   "java-developer": normalizeCvData({
     header: {
@@ -249,7 +249,7 @@ export const presets: Record<PresetKey, CvData> = {
       title: "Formation",
       summary: "Master genie logiciel, bases solides en algorithmique, modelisation, developpement Java et bases de donnees.",
     },
-    render: { mode: "edit", maxPages: 2, theme: "claude", sidebarPosition: "left" },
+    render: { mode: "edit", maxPages: 2, theme: "claude", sidebarPosition: "left", language: "french" },
   }),
   devops: normalizeCvData({
     header: {
@@ -379,7 +379,7 @@ export const presets: Record<PresetKey, CvData> = {
       title: "Formation",
       summary: "Formation continue orientee DevOps, Cloud, automatisation, exploitation et outillage plateforme.",
     },
-    render: { mode: "edit", maxPages: 2, theme: "ocean", sidebarPosition: "left" },
+    render: { mode: "edit", maxPages: 2, theme: "ocean", sidebarPosition: "left", language: "french" },
   }),
   "soc-engineer": normalizeCvData({
     header: {
@@ -508,7 +508,7 @@ export const presets: Record<PresetKey, CvData> = {
       title: "Formation",
       summary: "Formation initiale cybersecurite et certifications orientees SOC, detection et reponse a incident.",
     },
-    render: { mode: "edit", maxPages: 2, theme: "cyber", sidebarPosition: "left" },
+    render: { mode: "edit", maxPages: 2, theme: "cyber", sidebarPosition: "left", language: "french" },
   }),
   "sophrologue-trainer": normalizeCvData({
     header: {
@@ -621,6 +621,6 @@ export const presets: Record<PresetKey, CvData> = {
       title: "Formation",
       summary: "Formation de sophrologue completee par une formation de formateur, avec pratique d'animation, construction de supports et adaptation pedagogique selon les publics.",
     },
-    render: { mode: "edit", maxPages: 2, theme: "zen", sidebarPosition: "left" },
+    render: { mode: "edit", maxPages: 2, theme: "zen", sidebarPosition: "left", language: "french" },
   }),
 };

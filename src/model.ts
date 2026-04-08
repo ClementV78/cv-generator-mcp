@@ -1,6 +1,8 @@
 import { LIMITS } from "./constants";
+import { getCvLanguageCopy, inferCvLanguage, normalizeCvLanguage } from "./i18n";
 import type {
   CardIcon,
+  CvLanguage,
   CvTheme,
   CvData,
   Experience,
@@ -51,6 +53,9 @@ const asTheme = (value: unknown, fallback: CvTheme = "ocean"): CvTheme => {
 const asSidebarPosition = (value: unknown, fallback: SidebarPosition = "left"): SidebarPosition =>
   value === "right" ? "right" : fallback;
 
+const asCvLanguage = (value: unknown, fallback: CvLanguage = "english"): CvLanguage =>
+  normalizeCvLanguage(value, fallback);
+
 const getDefaultBadgeText = (fullName: string): string => {
   const parts = fullName
     .trim()
@@ -73,30 +78,30 @@ export const createId = (prefix = "item"): string => {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
-export const createTextItem = (text = "Nouvelle ligne"): TextItem => ({
+export const createTextItem = (text = "New line"): TextItem => ({
   id: createId("text"),
   text,
 });
 
-export const createTagItem = (label = "Nouveau tag"): TagItem => ({
+export const createTagItem = (label = "New tag"): TagItem => ({
   id: createId("tag"),
   label,
 });
 
-export const createSkillBarItem = (label = "Nouvelle compétence", level = 60): SkillBarItem => ({
+export const createSkillBarItem = (label = "New skill", level = 60): SkillBarItem => ({
   id: createId("skill"),
   label,
   level,
 });
 
-export const createSkillBarGroup = (title = "Nouveau bloc de compétences"): SkillBarGroup => ({
+export const createSkillBarGroup = (title = "New skill group"): SkillBarGroup => ({
   id: createId("skill-group"),
   title,
   type: "bars",
   items: [createSkillBarItem()],
 });
 
-export const createSkillTagGroup = (title = "Langages & Outils"): SkillTagGroup => ({
+export const createSkillTagGroup = (title = "Languages & Tools"): SkillTagGroup => ({
   id: createId("tag-group"),
   title,
   type: "tags",
@@ -105,8 +110,8 @@ export const createSkillTagGroup = (title = "Langages & Outils"): SkillTagGroup 
 
 export const createSidebarCard = (
   icon: CardIcon,
-  title = "Nouvelle carte",
-  subtitle = "Sous-titre",
+  title = "New card",
+  subtitle = "Subtitle",
   meta = "",
 ): SidebarCard => ({
   id: createId("card"),
@@ -117,8 +122,8 @@ export const createSidebarCard = (
 });
 
 export const createLanguageCard = (
-  title = "Nouvelle langue",
-  subtitle = "Niveau à préciser",
+  title = "New language",
+  subtitle = "Level to specify",
 ): LanguageCard => ({
   id: createId("lang"),
   title,
@@ -127,29 +132,29 @@ export const createLanguageCard = (
 
 export const createProject = (): ExperienceProject => ({
   id: createId("project"),
-  title: "Nouveau projet",
+  title: "New project",
   period: "2025",
-  bullets: [createTextItem("Décrire le périmètre et la contribution.")],
-  techEnvironmentLabel: "Environnement technique",
-  techEnvironment: "Technologies à préciser",
+  bullets: [createTextItem("Describe the scope and contribution.")],
+  techEnvironmentLabel: "Technical environment",
+  techEnvironment: "Technologies to specify",
 });
 
 export const createExperience = (): Experience => ({
   id: createId("experience"),
-  company: "Nouvelle entreprise",
-  role: "Nouveau rôle",
+  company: "New company",
+  role: "New role",
   period: "2025",
-  subtitle: "Sous-projet ou périmètre",
-  bullets: [createTextItem("Décrire la mission et la contribution principale.")],
-  techEnvironmentLabel: "Environnement technique",
-  techEnvironment: "Technologies à préciser",
+  subtitle: "Project / scope",
+  bullets: [createTextItem("Describe the mission and the main contribution.")],
+  techEnvironmentLabel: "Technical environment",
+  techEnvironment: "Technologies to specify",
   projects: [],
 });
 
 export const createMainEducation = (): MainEducationBlock => ({
   enabled: true,
-  title: "Formation",
-  summary: "Ajouter ici un rappel de formation dense et optionnel.",
+  title: "Education",
+  summary: "Add a concise and optional education summary here.",
 });
 
 export const countSkillBars = (skillGroups: SkillGroup[]): number =>
@@ -213,30 +218,45 @@ export const canAddFactory = (state: CvData, path: string, factory: string): boo
   return true;
 };
 
-export const createItemFromFactory = (factory: string): unknown => {
+export const createItemFromFactory = (factory: string, language: CvLanguage = "english"): unknown => {
+  const copy = getCvLanguageCopy(language);
   switch (factory) {
     case "skill-bar-group":
-      return createSkillBarGroup();
+      return createSkillBarGroup(copy.defaults.newSkillGroupTitle);
     case "skill-tag-group":
-      return createSkillTagGroup();
+      return createSkillTagGroup(copy.defaults.tagGroupTitle);
     case "skill-bar-item":
-      return createSkillBarItem();
+      return createSkillBarItem(copy.defaults.newSkillLabel);
     case "tag-item":
-      return createTagItem();
+      return createTagItem(copy.defaults.newTag);
     case "highlight":
-      return createTextItem("Nouveau highlight");
+      return createTextItem(copy.defaults.newTextLine);
     case "certification":
-      return createSidebarCard("certification", "Nouvelle certification", "2026");
+      return createSidebarCard("certification", copy.defaults.newCardTitle, "2026");
     case "formation":
-      return createSidebarCard("formation", "Nouvelle formation", "2026");
+      return createSidebarCard("formation", copy.defaults.mainEducationTitle, "2026");
     case "language":
-      return createLanguageCard();
+      return createLanguageCard(copy.defaults.newLanguageTitle, copy.defaults.newLanguageSubtitle);
     case "experience":
-      return createExperience();
+      return {
+        ...createExperience(),
+        company: copy.defaults.newExperienceCompany,
+        role: copy.defaults.newExperienceRole,
+        subtitle: copy.defaults.newExperienceSubtitle,
+        bullets: [createTextItem(copy.defaults.newExperienceBullet)],
+        techEnvironmentLabel: copy.defaults.techEnvironmentLabel,
+        techEnvironment: copy.defaults.technologiesToSpecify,
+      };
     case "project":
-      return createProject();
+      return {
+        ...createProject(),
+        title: copy.defaults.newProjectTitle,
+        bullets: [createTextItem(copy.defaults.newProjectBullet)],
+        techEnvironmentLabel: copy.defaults.techEnvironmentLabel,
+        techEnvironment: copy.defaults.technologiesToSpecify,
+      };
     case "bullet":
-      return createTextItem("Nouvelle contribution");
+      return createTextItem(copy.defaults.newExperienceBullet);
     default:
       return null;
   }
@@ -349,18 +369,20 @@ const normalizeTextItem = (input: unknown, fallback: string): TextItem => {
 
 const normalizeSkillGroup = (input: unknown): SkillGroup => {
   const item = asRecord(input);
+  const language = inferCvLanguage(input);
+  const copy = getCvLanguageCopy(language);
   const type = item.type === "tags" ? "tags" : "bars";
 
   if (type === "tags") {
     return {
       id: asString(item.id, createId("tag-group")),
-      title: asString(item.title, "Langages & Outils"),
+      title: asString(item.title, copy.defaults.tagGroupTitle),
       type,
       items: asArray<unknown>(item.items).map((entry) => {
         const tag = asRecord(entry);
         return {
           id: asString(tag.id, createId("tag")),
-          label: asString(tag.label, "Nouveau tag"),
+          label: asString(tag.label, copy.defaults.newTag),
         };
       }),
     };
@@ -368,13 +390,13 @@ const normalizeSkillGroup = (input: unknown): SkillGroup => {
 
   return {
     id: asString(item.id, createId("skill-group")),
-    title: asString(item.title, "Bloc de compétences"),
+    title: asString(item.title, copy.defaults.newSkillGroupTitle),
     type,
     items: asArray<unknown>(item.items).map((entry) => {
       const skill = asRecord(entry);
       return {
         id: asString(skill.id, createId("skill")),
-        label: asString(skill.label, "Nouvelle compétence"),
+        label: asString(skill.label, copy.defaults.newSkillLabel),
         level: Math.min(100, Math.max(0, asNumber(skill.level, 60))),
       };
     }),
@@ -400,40 +422,43 @@ const normalizeSidebarCard = (
 
 const normalizeLanguage = (input: unknown): LanguageCard => {
   const item = asRecord(input);
+  const copy = getCvLanguageCopy(inferCvLanguage(input));
   return {
     id: asString(item.id, createId("lang")),
-    title: asString(item.title, "Nouvelle langue"),
-    subtitle: asString(item.subtitle, "Niveau à préciser"),
+    title: asString(item.title, copy.defaults.newLanguageTitle),
+    subtitle: asString(item.subtitle, copy.defaults.newLanguageSubtitle),
   };
 };
 
 const normalizeProject = (input: unknown): ExperienceProject => {
   const item = asRecord(input);
+  const copy = getCvLanguageCopy(inferCvLanguage(input));
   return {
     id: asString(item.id, createId("project")),
-    title: asString(item.title, "Nouveau projet"),
+    title: asString(item.title, copy.defaults.newProjectTitle),
     period: asString(item.period, "2025"),
     bullets: asArray<unknown>(item.bullets).map((entry) =>
-      normalizeTextItem(entry, "Décrire la contribution."),
+      normalizeTextItem(entry, copy.defaults.newProjectBullet),
     ),
-    techEnvironmentLabel: asString(item.techEnvironmentLabel, "Environnement technique"),
-    techEnvironment: asString(item.techEnvironment, "Technologies à préciser"),
+    techEnvironmentLabel: asString(item.techEnvironmentLabel, copy.defaults.techEnvironmentLabel),
+    techEnvironment: asString(item.techEnvironment, copy.defaults.technologiesToSpecify),
   };
 };
 
 const normalizeExperience = (input: unknown): Experience => {
   const item = asRecord(input);
+  const copy = getCvLanguageCopy(inferCvLanguage(input));
   return {
     id: asString(item.id, createId("experience")),
-    company: asString(item.company, "Nouvelle entreprise"),
-    role: asString(item.role, "Nouveau rôle"),
+    company: asString(item.company, copy.defaults.newExperienceCompany),
+    role: asString(item.role, copy.defaults.newExperienceRole),
     period: asString(item.period, "2025"),
-    subtitle: asString(item.subtitle, "Sous-projet ou périmètre"),
+    subtitle: asString(item.subtitle, copy.defaults.newExperienceSubtitle),
     bullets: asArray<unknown>(item.bullets).map((entry) =>
-      normalizeTextItem(entry, "Décrire la mission."),
+      normalizeTextItem(entry, copy.defaults.newExperienceBullet),
     ),
-    techEnvironmentLabel: asString(item.techEnvironmentLabel, "Environnement technique"),
-    techEnvironment: asString(item.techEnvironment, "Technologies à préciser"),
+    techEnvironmentLabel: asString(item.techEnvironmentLabel, copy.defaults.techEnvironmentLabel),
+    techEnvironment: asString(item.techEnvironment, copy.defaults.technologiesToSpecify),
     projects: asArray<unknown>(item.projects).map(normalizeProject),
   };
 };
@@ -443,6 +468,9 @@ export const normalizeCvData = (input: unknown): CvData => {
   const header = asRecord(source.header);
   const mainEducation = asRecord(source.mainEducation);
   const render = asRecord(source.render);
+  const inferredLanguage = inferCvLanguage(input);
+  const language = asCvLanguage(render.language, inferredLanguage);
+  const copy = getCvLanguageCopy(language);
   const maxPagesValue = render.maxPages;
   const maxPages =
     maxPagesValue === 1 || maxPagesValue === 2 || maxPagesValue === 3 ? maxPagesValue : null;
@@ -462,35 +490,35 @@ export const normalizeCvData = (input: unknown): CvData => {
       linkedin: asString(header.linkedin, "linkedin.com/in/alex-martin"),
       availabilityText: asString(
         header.availabilityText,
-        "Disponible pour des missions en architecture Cloud, plateforme et DevOps",
+        copy.defaults.availabilityText,
       ),
-      qrCodeLabel: asString(header.qrCodeLabel, "Version web"),
+      qrCodeLabel: asString(header.qrCodeLabel, copy.defaults.qrCodeLabel),
       qrCodeUrl: asString(header.qrCodeUrl, "https://example.com/cv"),
       showQrCode: asBoolean(header.showQrCode, true),
     },
-    profileLabel: asString(source.profileLabel, "Profil professionnel"),
+    profileLabel: asString(source.profileLabel, copy.defaults.profileLabel),
     profile: asString(
       source.profile,
-      "Architecte Cloud et ingénieur DevOps avec une expérience en développement, conception technique, leadership technique et mise en œuvre de plateformes.",
+      copy.defaults.profile,
     ),
     skillGroups: sortSkillGroupsForLayout(asArray<unknown>(source.skillGroups).map(normalizeSkillGroup)),
     highlights: asArray<unknown>(source.highlights).map((entry) =>
-      normalizeTextItem(entry, "Nouveau highlight"),
+      normalizeTextItem(entry, copy.defaults.newTextLine),
     ),
     certifications: asArray<unknown>(source.certifications).map((entry) =>
-      normalizeSidebarCard(entry, "Nouvelle certification", "2026", "certification"),
+      normalizeSidebarCard(entry, copy.defaults.newCardTitle, "2026", "certification"),
     ),
     formations: asArray<unknown>(source.formations).map((entry) =>
-      normalizeSidebarCard(entry, "Nouvelle formation", "2026", "formation"),
+      normalizeSidebarCard(entry, copy.defaults.mainEducationTitle, "2026", "formation"),
     ),
     languages: asArray<unknown>(source.languages).map(normalizeLanguage),
     experiences: asArray<unknown>(source.experiences).map(normalizeExperience),
     mainEducation: {
       enabled: asBoolean(mainEducation.enabled, true),
-      title: asString(mainEducation.title, "Formation"),
+      title: asString(mainEducation.title, copy.defaults.mainEducationTitle),
       summary: asString(
         mainEducation.summary,
-        "Ajouter ici un rappel de formation ou de certifications complémentaires.",
+        copy.defaults.mainEducationSummary,
       ),
     },
     render: {
@@ -498,6 +526,7 @@ export const normalizeCvData = (input: unknown): CvData => {
       maxPages,
       theme: asTheme(render.theme),
       sidebarPosition: asSidebarPosition(render.sidebarPosition),
+      language,
     },
   };
 };

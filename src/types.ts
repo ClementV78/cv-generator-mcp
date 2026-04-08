@@ -11,6 +11,8 @@ export type CvTheme =
   | "cyber"
   | "cyber-purple";
 export type SidebarPosition = "left" | "right";
+export const CV_LANGUAGE_VALUES = ["english", "french", "spanish"] as const;
+export type CvLanguage = (typeof CV_LANGUAGE_VALUES)[number];
 
 export interface HeaderData {
   name: string;
@@ -103,6 +105,7 @@ export interface RenderSettings {
   maxPages: 1 | 2 | 3 | null;
   theme: CvTheme;
   sidebarPosition: SidebarPosition;
+  language: CvLanguage;
 }
 
 export interface CvData {

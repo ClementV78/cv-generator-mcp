@@ -103,6 +103,7 @@ const compactCvDataExample = {
     maxPages: 2,
     theme: "ocean",
     sidebarPosition: "left",
+    language: "french",
   },
 } as const;
 

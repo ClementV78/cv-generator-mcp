@@ -20,12 +20,26 @@ Use this skill when the user asks to:
 
 Treat `CvData` as the source of truth. Do not invent alternate field names.
 
+## Package Reference
+
+Published MCP package:
+
+- `@xclem/cv-generator-mcp`
+
+Direct launch:
+
+```bash
+npx -y @xclem/cv-generator-mcp
+```
+
 ## Preferred Workflow
 
 1. Start from an existing example when possible.
    - Good defaults: `examples/cv-minimal.json`
+   - For a DevOps role: `examples/cv-devops.json`
    - For a cloud role: `examples/cv-cloud-architect.json`
 2. Before building the final payload, ask the user for any missing visual preferences that materially affect the render:
+   - CV language: `english`, `french`, or `spanish`
    - theme
    - PDF style: `paginated` or `continuous`
    - QR code: enabled or disabled
@@ -37,17 +51,35 @@ Treat `CvData` as the source of truth. Do not invent alternate field names.
    - `mcp_cv_generator_generate_cv_html`
    - `mcp_cv_generator_generate_cv_pdf`
 
+## Tool Calling Discipline
+
+- Prefer editing a nearby example object and calling the MCP tool directly with a native JSON payload.
+- Do not build the payload through `exec`, ad hoc Python, or stringified JSON literals.
+- Do not use Python or shell helpers just to assemble `cv_data`.
+- If the payload is too large for a single call, switch to the chunked MCP workflow instead of using `exec`.
+- For simple generation requests, skip unnecessary intermediate scripting.
+
 ## Preference Capture
 
-If the user has not already specified the visual setup, ask before generation.
+If the user has not already specified the visual setup, ask before generation only when the missing choice is likely to change the expected result materially.
 
 Minimum preference checklist:
+- CV language: `english`, `french`, or `spanish`
 - theme
 - PDF style: `paginated` or `continuous`
 - QR code: on or off
 - sidebar position: `left` or `right`
 
+If the user already gave enough direction for a first useful version, do not block on every missing preference. Apply defaults and state them briefly.
+
+Language rule:
+- supported CV languages are `english`, `french`, and `spanish`
+- default to `english`
+- if the user is clearly writing in French, English, or Spanish, use that language by default unless they ask for another one
+- if the user writes in another language, default the CV content to `english` unless they explicitly choose one of the supported languages
+
 If the user gives carte blanche, choose sensible defaults and state them briefly:
+- CV language: `english`
 - theme: `graphite`
 - PDF style: `paginated`
 - QR code: `off` unless a web version is explicitly useful
@@ -62,6 +94,8 @@ If QR code is enabled for a fake CV, keep the URL fictional but coherent.
 - Keep experience, dates, certifications, and skills believable for the claimed seniority.
 - Match the user's requested role, location, and seniority.
 - If the user asks for "realistic", prefer concrete companies, projects, and tooling over vague filler.
+- Keep the full CV linguistically consistent: labels, profile, bullets, education, certifications, and availability text should all use the same language.
+- When starting from a French example for an English or Spanish CV, translate the content instead of leaving mixed-language sections.
 
 ## Schema Rules
 
@@ -93,12 +127,14 @@ When a tool call fails:
 
 ## Good Defaults
 
+- CV language: `english`, unless the user is clearly writing in `french` or `spanish`
 - Theme: `graphite` for a professional fake CV, `ocean` for a more neutral look
 - PDF style: `paginated` unless the user asks for `continuous`
 - QR code: disabled unless the user asks for it or a web version is explicitly part of the deliverable
 - Sidebar position: `left` unless the user asks otherwise
 - `maxPages`: `2` for a compact realistic profile
 - Use one clear headline, one compact profile, and two experience entries for a 5-year profile
+- For a DevOps request, prefer starting from `examples/cv-devops.json`
 
 ## Output Discipline
 

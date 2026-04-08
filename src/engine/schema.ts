@@ -1,3 +1,5 @@
+import { CV_LANGUAGE_VALUES } from "../types";
+
 export const CV_THEME_VALUES = [
   "ocean",
   "zen",
@@ -93,6 +95,7 @@ const cvDataMinimalExample = {
     maxPages: 2,
     theme: "ocean",
     sidebarPosition: "left",
+    language: "french",
   },
 } as const;
 
@@ -318,7 +321,8 @@ export const cvDataJsonSchema = {
     },
     render: {
       type: "object",
-      description: "Options de rendu visuel du template.",
+      description:
+        "Options de rendu visuel du template. Les cles JSON restent en anglais quel que soit render.language.",
       additionalProperties: false,
       required: ["mode", "maxPages", "theme", "sidebarPosition"],
       properties: {
@@ -328,6 +332,12 @@ export const cvDataJsonSchema = {
         },
         theme: { type: "string", enum: [...CV_THEME_VALUES] },
         sidebarPosition: { type: "string", enum: [...SIDEBAR_POSITION_VALUES] },
+        language: {
+          type: "string",
+          enum: [...CV_LANGUAGE_VALUES],
+          description:
+            "Langue visible du CV final. Les cles du schema CvData restent en anglais, seul le contenu et les libelles rendus changent.",
+        },
       },
     },
   },

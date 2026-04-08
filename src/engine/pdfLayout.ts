@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { LIMITS } from "../constants";
+import { getCvLanguageCopy } from "../i18n";
 import type { CvData, CvTheme, SkillBarGroup, SkillTagGroup, TextItem, ValidationIssue } from "../types";
 import { generateQrPngDataUrl } from "./qr";
 import { formatLineMessage } from "../validationShared";
@@ -98,6 +99,7 @@ const issueIfTooTall = (
   label: string,
   maxLines: number,
   value: string,
+  language: CvData["render"]["language"],
   font: PDFFont,
   fontSize: number,
   width: number,
@@ -107,7 +109,7 @@ const issueIfTooTall = (
   if (lineCount > maxLines) {
     issues.push({
       id: `${targetBind ?? label}-${maxLines}`,
-      message: formatLineMessage(label, maxLines, value),
+      message: formatLineMessage(label, maxLines, value, language),
       targetBind,
     });
   }
@@ -208,6 +210,7 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const issues: ValidationIssue[] = [];
+  const copy = getCvLanguageCopy(data.render.language);
   const contentHeight = PAGE_HEIGHT - TOP_MARGIN - BOTTOM_MARGIN;
   const sidebarTextWidth = SIDEBAR_WIDTH - 20;
   const mainWidth = PAGE_WIDTH - PAGE_MARGIN * 2 - SIDEBAR_WIDTH - GUTTER;
@@ -221,7 +224,7 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
     sidebar.reserve(72 + textHeight(data.header.qrCodeLabel, bold, 9, sidebarTextWidth - 12) + textHeight(data.header.qrCodeUrl, regular, 7.5, sidebarTextWidth - 12) + 18);
   }
   sidebar.gap(12);
-  sidebar.reserve(textHeight("COMPÉTENCES", bold, 12, sidebarTextWidth) + 8);
+  sidebar.reserve(textHeight(copy.sectionSkills.toUpperCase(), bold, 12, sidebarTextWidth) + 8);
   data.skillGroups.forEach((group) => {
     sidebar.reserve(textHeight(group.title, bold, 11, sidebarTextWidth) + 4);
     if (group.type === "bars") {
@@ -245,10 +248,10 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
   });
 
   ([
-    ["HIGHLIGHTS", data.highlights.length],
-    ["CERTIFICATIONS", data.certifications.length],
-    ["FORMATIONS", data.formations.length],
-    ["LANGUES", data.languages.length],
+    [copy.sectionHighlights.toUpperCase(), data.highlights.length],
+    [copy.sectionCertifications.toUpperCase(), data.certifications.length],
+    [copy.sectionFormations.toUpperCase(), data.formations.length],
+    [copy.sectionLanguages.toUpperCase(), data.languages.length],
   ] as Array<[string, number]>).forEach(([title, count]) => {
     if (count > 0) {
       sidebar.gap(10);
@@ -257,39 +260,123 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
   });
 
   data.highlights.forEach((item, index) => {
-    issueIfTooTall(issues, "Highlight", LIMITS.highlightLines, item.text, bold, 9.5, sidebarTextWidth - 18, `highlights.${index}.text`);
+    issueIfTooTall(
+      issues,
+      copy.sectionHighlights,
+      LIMITS.highlightLines,
+      item.text,
+      data.render.language,
+      bold,
+      9.5,
+      sidebarTextWidth - 18,
+      `highlights.${index}.text`,
+    );
     sidebar.reserve(22 + textHeight(item.text, bold, 9.5, sidebarTextWidth - 18));
   });
   data.certifications.forEach((item, index) => {
-    issueIfTooTall(issues, "Titre", LIMITS.certificationTitleLines, item.title, bold, 9.5, sidebarTextWidth - 18, `certifications.${index}.title`);
-    issueIfTooTall(issues, "Libellé secondaire", LIMITS.certificationMetaLines, item.subtitle, regular, 8.5, sidebarTextWidth - 18, `certifications.${index}.subtitle`);
-    if (item.meta) issueIfTooTall(issues, "Méta", 1, item.meta, regular, 8, sidebarTextWidth - 18, `certifications.${index}.meta`);
+    issueIfTooTall(
+      issues,
+      copy.labelTitle,
+      LIMITS.certificationTitleLines,
+      item.title,
+      data.render.language,
+      bold,
+      9.5,
+      sidebarTextWidth - 18,
+      `certifications.${index}.title`,
+    );
+    issueIfTooTall(
+      issues,
+      copy.labelSecondary,
+      LIMITS.certificationMetaLines,
+      item.subtitle,
+      data.render.language,
+      regular,
+      8.5,
+      sidebarTextWidth - 18,
+      `certifications.${index}.subtitle`,
+    );
+    if (item.meta) {
+      issueIfTooTall(
+        issues,
+        copy.labelMetadata,
+        1,
+        item.meta,
+        data.render.language,
+        regular,
+        8,
+        sidebarTextWidth - 18,
+        `certifications.${index}.meta`,
+      );
+    }
     sidebar.reserve(22 + textHeight(item.title, bold, 9.5, sidebarTextWidth - 18) + textHeight(item.subtitle, regular, 8.5, sidebarTextWidth - 18) + (item.meta ? textHeight(item.meta, regular, 8, sidebarTextWidth - 18) : 0));
   });
   data.formations.forEach((item, index) => {
-    issueIfTooTall(issues, "Titre", 2, item.title, bold, 9.5, sidebarTextWidth - 18, `formations.${index}.title`);
-    issueIfTooTall(issues, "Libellé secondaire", LIMITS.certificationMetaLines, item.subtitle, regular, 8.5, sidebarTextWidth - 18, `formations.${index}.subtitle`);
+    issueIfTooTall(issues, copy.labelTitle, 2, item.title, data.render.language, bold, 9.5, sidebarTextWidth - 18, `formations.${index}.title`);
+    issueIfTooTall(
+      issues,
+      copy.labelSecondary,
+      LIMITS.certificationMetaLines,
+      item.subtitle,
+      data.render.language,
+      regular,
+      8.5,
+      sidebarTextWidth - 18,
+      `formations.${index}.subtitle`,
+    );
     sidebar.reserve(22 + textHeight(item.title, bold, 9.5, sidebarTextWidth - 18) + textHeight(item.subtitle, regular, 8.5, sidebarTextWidth - 18) + (item.meta ? textHeight(item.meta, regular, 8, sidebarTextWidth - 18) : 0));
   });
   data.languages.forEach((item, index) => {
-    issueIfTooTall(issues, "Niveau de langue", LIMITS.languageLines, item.subtitle, regular, 8.5, sidebarTextWidth - 18, `languages.${index}.subtitle`);
+    issueIfTooTall(
+      issues,
+      copy.labelLanguageLevel,
+      LIMITS.languageLines,
+      item.subtitle,
+      data.render.language,
+      regular,
+      8.5,
+      sidebarTextWidth - 18,
+      `languages.${index}.subtitle`,
+    );
     sidebar.reserve(22 + textHeight(item.title, bold, 9.5, sidebarTextWidth - 18) + textHeight(item.subtitle, regular, 8.5, sidebarTextWidth - 18));
   });
 
   const main = new Flow(mode, contentHeight);
   const mainSoftBreakOffsets: number[] = [];
   main.reserve(textHeight(data.header.name, bold, 28, mainWidth) + textHeight(data.header.headline, bold, 13, mainWidth) + 16);
-  issueIfTooTall(issues, data.profileLabel, LIMITS.profileLines, data.profile, regular, 10, mainWidth - 70, "profile");
+  issueIfTooTall(issues, data.profileLabel, LIMITS.profileLines, data.profile, data.render.language, regular, 10, mainWidth - 70, "profile");
   main.reserve(textHeight(`${data.profileLabel} : ${data.profile}`, regular, 10, mainWidth - 20) + 16);
   main.gap(16);
-  main.reserve(textHeight("EXPÉRIENCES PROFESSIONNELLES ET PROJETS", bold, 18, mainWidth) + 8);
+  main.reserve(textHeight(copy.sectionExperienceAndProjects.toUpperCase(), bold, 18, mainWidth) + 8);
 
   data.experiences.forEach((experience, experienceIndex) => {
     const experienceStartOffset = main.absoluteTop();
-    issueIfTooTall(issues, "Période", 1, experience.period, regular, 8.5, mainWidth - 40, `experiences.${experienceIndex}.period`);
-    issueIfTooTall(issues, "Sous-titre d'expérience", 2, experience.subtitle, bold, 10.5, mainWidth - 40, `experiences.${experienceIndex}.subtitle`);
-    issueIfTooTall(issues, experience.techEnvironmentLabel, LIMITS.techEnvironmentLines, experience.techEnvironment, regular, 8.75, mainWidth - 52, `experiences.${experienceIndex}.techEnvironment`);
-    experience.bullets.forEach((bullet, bulletIndex) => issueIfTooTall(issues, "Bullet point", LIMITS.bulletLines, bullet.text, regular, 10, mainWidth - 54, `experiences.${experienceIndex}.bullets.${bulletIndex}.text`));
+    issueIfTooTall(issues, copy.labelPeriod, 1, experience.period, data.render.language, regular, 8.5, mainWidth - 40, `experiences.${experienceIndex}.period`);
+    issueIfTooTall(
+      issues,
+      copy.labelExperienceSubtitle,
+      2,
+      experience.subtitle,
+      data.render.language,
+      bold,
+      10.5,
+      mainWidth - 40,
+      `experiences.${experienceIndex}.subtitle`,
+    );
+    issueIfTooTall(issues, experience.techEnvironmentLabel, LIMITS.techEnvironmentLines, experience.techEnvironment, data.render.language, regular, 8.75, mainWidth - 52, `experiences.${experienceIndex}.techEnvironment`);
+    experience.bullets.forEach((bullet, bulletIndex) =>
+      issueIfTooTall(
+        issues,
+        copy.labelBulletPoint,
+        LIMITS.bulletLines,
+        bullet.text,
+        data.render.language,
+        regular,
+        10,
+        mainWidth - 54,
+        `experiences.${experienceIndex}.bullets.${bulletIndex}.text`,
+      ),
+    );
     const periodHeight = textHeight(experience.period, regular, 8.5, mainWidth - 40);
     const subtitleHeight = textHeight(experience.subtitle, bold, 10.5, mainWidth - 40);
     const experienceTechHeight = textHeight(`${experience.techEnvironmentLabel} : ${experience.techEnvironment}`, regular, 8.75, mainWidth - 40);
@@ -303,9 +390,31 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
       mainSoftBreakOffsets.push(experienceStartOffset + relativeOffset);
     });
     experience.projects.forEach((project, projectIndex) => {
-      issueIfTooTall(issues, "Période", 1, project.period, regular, 8.5, mainWidth - 68, `experiences.${experienceIndex}.projects.${projectIndex}.period`);
-      issueIfTooTall(issues, project.techEnvironmentLabel, LIMITS.techEnvironmentLines, project.techEnvironment, regular, 8.5, mainWidth - 68, `experiences.${experienceIndex}.projects.${projectIndex}.techEnvironment`);
-      project.bullets.forEach((bullet, bulletIndex) => issueIfTooTall(issues, "Bullet point", LIMITS.bulletLines, bullet.text, regular, 10, mainWidth - 80, `experiences.${experienceIndex}.projects.${projectIndex}.bullets.${bulletIndex}.text`));
+      issueIfTooTall(
+        issues,
+        copy.labelPeriod,
+        1,
+        project.period,
+        data.render.language,
+        regular,
+        8.5,
+        mainWidth - 68,
+        `experiences.${experienceIndex}.projects.${projectIndex}.period`,
+      );
+      issueIfTooTall(issues, project.techEnvironmentLabel, LIMITS.techEnvironmentLines, project.techEnvironment, data.render.language, regular, 8.5, mainWidth - 68, `experiences.${experienceIndex}.projects.${projectIndex}.techEnvironment`);
+      project.bullets.forEach((bullet, bulletIndex) =>
+        issueIfTooTall(
+          issues,
+          copy.labelBulletPoint,
+          LIMITS.bulletLines,
+          bullet.text,
+          data.render.language,
+          regular,
+          10,
+          mainWidth - 80,
+          `experiences.${experienceIndex}.projects.${projectIndex}.bullets.${bulletIndex}.text`,
+        ),
+      );
       const projectTitleHeight = textHeight(project.title, bold, 11, mainWidth - 68);
       const projectPeriodHeight = textHeight(project.period, regular, 8.5, mainWidth - 68);
       const projectTechHeight = textHeight(`${project.techEnvironmentLabel} : ${project.techEnvironment}`, regular, 8.5, mainWidth - 68);
@@ -344,7 +453,10 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
   const sidebarBreakOffsets = normalizeBreakOffsets(sidebar.breakOffsets, contentMaxHeight);
   const pageLimitExceeded = data.render.maxPages !== null && pageCount > data.render.maxPages;
   if (pageLimitExceeded) {
-    issues.push({ id: `page-limit-${data.render.maxPages}`, message: `Le rendu depasse la limite de ${data.render.maxPages} pages.` });
+    issues.push({
+      id: `page-limit-${data.render.maxPages}`,
+      message: copy.pageLimitExceeded(Number(data.render.maxPages)),
+    });
   }
 
   return {
@@ -369,6 +481,7 @@ export const renderCvPdfWithEmbeddedLibrary = async (data: CvData, mode: PdfMode
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const { metrics } = await measureLayout(data, mode);
+  const copy = getCvLanguageCopy(data.render.language);
   const palette = getPalette(data.render.theme);
   const pageHeight = mode === "continuous" ? Math.max(PAGE_HEIGHT, metrics.continuousHeight) : PAGE_HEIGHT;
   const mainWidth = PAGE_WIDTH - PAGE_MARGIN * 2 - SIDEBAR_WIDTH - GUTTER;
@@ -439,7 +552,7 @@ export const renderCvPdfWithEmbeddedLibrary = async (data: CvData, mode: PdfMode
   };
 
   sidebar.gap(12);
-  drawSection(sidebar, "COMPÉTENCES", sidebarX + 10, SIDEBAR_WIDTH - 20, true);
+  drawSection(sidebar, copy.sectionSkills.toUpperCase(), sidebarX + 10, SIDEBAR_WIDTH - 20, true);
   data.skillGroups.forEach((group) => {
     const groupLines = wrapText(group.title, bold, 11, SIDEBAR_WIDTH - 20);
     drawBlock(sidebar, groupLines.length * lineHeight(11) + 4, (page, top) => drawLines(page, groupLines, sidebarX + 10, top, bold, 11, palette.accent, pageHeight));
@@ -507,10 +620,10 @@ export const renderCvPdfWithEmbeddedLibrary = async (data: CvData, mode: PdfMode
     });
   };
 
-  drawSidebarCards("HIGHLIGHTS", data.highlights.map((item) => ({ title: item.text, subtitle: "" })));
-  drawSidebarCards("CERTIFICATIONS", data.certifications);
-  drawSidebarCards("FORMATIONS", data.formations);
-  drawSidebarCards("LANGUES", data.languages);
+  drawSidebarCards(copy.sectionHighlights.toUpperCase(), data.highlights.map((item) => ({ title: item.text, subtitle: "" })));
+  drawSidebarCards(copy.sectionCertifications.toUpperCase(), data.certifications);
+  drawSidebarCards(copy.sectionFormations.toUpperCase(), data.formations);
+  drawSidebarCards(copy.sectionLanguages.toUpperCase(), data.languages);
 
   drawBlock(main, textHeight(data.header.name, bold, 28, mainWidth) + textHeight(data.header.headline, bold, 13, mainWidth) + 16, (page, top) => {
     drawLines(page, wrapText(data.header.name, bold, 28, mainWidth), mainX, top, bold, 28, palette.text, pageHeight);
@@ -530,7 +643,7 @@ export const renderCvPdfWithEmbeddedLibrary = async (data: CvData, mode: PdfMode
   });
 
   main.gap(16);
-  drawSection(main, "EXPÉRIENCES PROFESSIONNELLES ET PROJETS", mainX, mainWidth, false);
+  drawSection(main, copy.sectionExperienceAndProjects.toUpperCase(), mainX, mainWidth, false);
   main.gap(6);
 
   data.experiences.forEach((experience) => {

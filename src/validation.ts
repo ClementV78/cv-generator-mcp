@@ -1,4 +1,5 @@
 import { LIMITS, PAGE_HEIGHT_PX } from "./constants";
+import { getCvLanguageCopy } from "./i18n";
 import { countSkillBars, countTags } from "./model";
 import type { CvData, ValidationIssue, ValidationResult } from "./types";
 import { formatLineMessage } from "./validationShared";
@@ -45,47 +46,48 @@ const countRenderedLines = (element: HTMLElement): number => {
 
 export const collectStructureMessages = (state: CvData): string[] => {
   const messages: string[] = [];
+  const copy = getCvLanguageCopy(state.render.language);
 
   if (state.skillGroups.length > LIMITS.maxSkillGroups) {
-    messages.push(`Maximum ${LIMITS.maxSkillGroups} blocs de competences.`);
+    messages.push(copy.structure.maxSkillGroups(LIMITS.maxSkillGroups));
   }
 
   if (countSkillBars(state.skillGroups) > LIMITS.maxSkillBars) {
-    messages.push(`Maximum ${LIMITS.maxSkillBars} competences a barres.`);
+    messages.push(copy.structure.maxSkillBars(LIMITS.maxSkillBars));
   }
 
   if (countTags(state.skillGroups) > LIMITS.maxTags) {
-    messages.push(`Maximum ${LIMITS.maxTags} tags dans les groupes de type tags.`);
+    messages.push(copy.structure.maxTags(LIMITS.maxTags));
   }
 
   if (state.highlights.length > LIMITS.maxHighlights) {
-    messages.push(`Maximum ${LIMITS.maxHighlights} highlights.`);
+    messages.push(copy.structure.maxHighlights(LIMITS.maxHighlights));
   }
 
   if (state.certifications.length > LIMITS.maxCertifications) {
-    messages.push(`Maximum ${LIMITS.maxCertifications} certifications.`);
+    messages.push(copy.structure.maxCertifications(LIMITS.maxCertifications));
   }
 
   if (state.languages.length > LIMITS.maxLanguages) {
-    messages.push(`Maximum ${LIMITS.maxLanguages} langues.`);
+    messages.push(copy.structure.maxLanguages(LIMITS.maxLanguages));
   }
 
   if (state.experiences.length > LIMITS.maxExperiences) {
-    messages.push(`Maximum ${LIMITS.maxExperiences} experiences.`);
+    messages.push(copy.structure.maxExperiences(LIMITS.maxExperiences));
   }
 
   state.experiences.forEach((experience) => {
     if (experience.projects.length > LIMITS.maxProjectsPerExperience) {
-      messages.push(`Maximum ${LIMITS.maxProjectsPerExperience} projets par experience.`);
+      messages.push(copy.structure.maxProjectsPerExperience(LIMITS.maxProjectsPerExperience));
     }
 
     if (experience.bullets.length > LIMITS.maxBulletsPerList) {
-      messages.push(`Maximum ${LIMITS.maxBulletsPerList} bullet points par experience.`);
+      messages.push(copy.structure.maxBulletsPerExperience(LIMITS.maxBulletsPerList));
     }
 
     experience.projects.forEach((project) => {
       if (project.bullets.length > LIMITS.maxBulletsPerList) {
-        messages.push(`Maximum ${LIMITS.maxBulletsPerList} bullet points par projet.`);
+        messages.push(copy.structure.maxBulletsPerProject(LIMITS.maxBulletsPerList));
       }
     });
   });
@@ -99,6 +101,7 @@ export const validateRenderedDocument = (
 ): ValidationResult => {
   const issues: ValidationIssue[] = [];
   const structureMessages = collectStructureMessages(state);
+  const copy = getCvLanguageCopy(state.render.language);
 
   root.querySelectorAll<HTMLElement>("[data-max-lines]").forEach((element) => {
     const maxLines = Number(element.dataset.maxLines || 0);
@@ -112,7 +115,12 @@ export const validateRenderedDocument = (
     if (isInvalid) {
       issues.push({
         id: `${targetBind ?? label}-${maxLines}`,
-        message: formatLineMessage(label, maxLines, element.innerText || element.textContent || ""),
+        message: formatLineMessage(
+          label,
+          maxLines,
+          element.innerText || element.textContent || "",
+          state.render.language,
+        ),
         targetBind,
       });
     }
@@ -126,7 +134,7 @@ export const validateRenderedDocument = (
   if (pageLimitExceeded) {
     issues.push({
       id: `page-limit-${state.render.maxPages}`,
-      message: `Le rendu depasse la limite de ${state.render.maxPages} pages.`,
+      message: copy.pageLimitExceeded(Number(state.render.maxPages)),
     });
   }
 
