@@ -91,16 +91,26 @@ Out of scope in this version:
 - Claude.ai
 - HTTP-hosted MCP
 
+### npm package
+
+Published package:
+
+- `@xclem/cv-generator-mcp`
+
+Run it directly from npm:
+
+```bash
+npx -y @xclem/cv-generator-mcp
+```
+
 ### Publish the MCP package manually
+
+For maintainers:
 
 ```bash
 npm login
 npm publish --access public
 ```
-
-Published package name:
-
-- `@xclem/cv-generator-mcp`
 
 ### Install the skill locally
 
@@ -481,17 +491,17 @@ Main documents:
 
 ## Beta V1 status
 
-Beta V1 means a repository that is ready to publish on GitHub with:
+Beta V1 means a repository that is publishable and usable with:
 
 - a working Node engine
 - a local MCP server
+- a published npm package
 - the local UI preserved
 - public JSON examples
 - reproducible tests
 
 It is not yet:
 
-- a fully stable public npm package
 - an official Docker container
 - a product with guaranteed compatibility across all environments
 
