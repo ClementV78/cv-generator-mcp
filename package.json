@@ -1,21 +1,42 @@
 {
-  "name": "cv-generator",
-  "private": true,
+  "name": "@xclem/cv-generator-mcp",
   "version": "0.1.0",
+  "description": "Local MCP server and skill bundle for generating and validating CvData-based resumes.",
   "type": "module",
+  "bin": {
+    "cv-generator-mcp": "./bin/cv-generator-mcp.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "examples",
+    "skills",
+    "scripts/install-skill.sh",
+    "scripts/print-mcp-config.sh",
+    "README.md",
+    "LICENSE",
+    "tsconfig.json"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "cli": "tsx src/cli/cvCli.ts",
     "mcp": "tsx src/mcp/server.ts",
+    "install-skill": "sh scripts/install-skill.sh",
+    "print-mcp-config": "sh scripts/print-mcp-config.sh",
     "smoke:pdf": "tsx scripts/smoke-pdf.ts",
     "test": "tsx --test tests/**/*.test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.7.2",
     "@types/qrcode": "^1.5.6",
-    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^5.4.18"
   },
@@ -24,6 +45,7 @@
     "@vivliostyle/cli": "^10.4.0",
     "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
+    "tsx": "^4.21.0",
     "zod": "^4.3.6"
   }
 }

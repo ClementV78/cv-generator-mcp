@@ -12,6 +12,7 @@ const projectRoot = path.join(__dirname, "..");
 const minimalFixturePath = path.join(__dirname, "fixtures", "cv-minimal.json");
 const tsxCliPath = path.join(projectRoot, "node_modules", "tsx", "dist", "cli.mjs");
 const mcpServerPath = path.join(projectRoot, "src", "mcp", "server.ts");
+const mcpLauncherPath = path.join(projectRoot, "bin", "cv-generator-mcp.mjs");
 
 const readMinimalFixture = async (): Promise<unknown> => {
   const raw = await readFile(minimalFixturePath, "utf-8");
@@ -91,6 +92,34 @@ test("MCP server exposes the expected tools and serves schema/html generation", 
     assert.equal(pdfStructuredContent.format, "pdf");
     assert.equal(pdfStructuredContent.pdf_mode, "continuous");
     assert.match(pdfStructuredContent.file_path, /cv-template-.*\.pdf$/);
+  } finally {
+    await client.close();
+  }
+});
+
+test("launcher bin starts the MCP server without npm script noise", async () => {
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [mcpLauncherPath],
+    cwd: projectRoot,
+    stderr: "pipe",
+  });
+
+  const client = new Client({
+    name: "cv-generator-test-client-launcher",
+    version: "0.1.0",
+  });
+
+  try {
+    await client.connect(transport);
+
+    const tools = await client.listTools();
+    const toolNames = tools.tools.map((tool) => tool.name);
+
+    assert(toolNames.includes("generate_cv_html"));
+    assert(toolNames.includes("generate_cv_pdf"));
+    assert(toolNames.includes("validate_cv"));
+    assert(toolNames.includes("get_cv_schema"));
   } finally {
     await client.close();
   }

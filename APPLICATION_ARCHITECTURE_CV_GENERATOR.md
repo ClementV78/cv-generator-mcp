@@ -1,44 +1,44 @@
-# Architecture Applicative - CV Generator
+# Application Architecture - CV Generator
 
-## Objet
+## Purpose
 
-Ce document decrit l'architecture applicative du projet `CV_Generator` :
+This document describes the application architecture of the `CV_Generator` project:
 
-- ses composants
-- leurs responsabilites
-- les flux entre eux
-- les frontieres techniques
-- les points d'entree
+- its components
+- their responsibilities
+- the flows between them
+- the technical boundaries
+- the entry points
 
-Ce document est volontairement descriptif.
+This document is intentionally descriptive.
 
-Il ne sert pas a argumenter un choix ; il sert a expliquer **comment l'application est construite et comment elle fonctionne**.
+It is not meant to argue for a design choice. Its role is to explain **how the application is built and how it works**.
 
 ---
 
-## Vue D'Ensemble
+## Overview
 
-L'application est composee de 4 sous-systemes principaux :
+The application is composed of 4 main subsystems:
 
-1. **UI Web**
+1. **Web UI**
 2. **CV Engine**
-3. **Serveur MCP local**
-4. **CLI locale**
+3. **Local MCP Server**
+4. **Local CLI**
 
-Positionnement :
+Positioning:
 
-- l'UI web est l'interface d'edition humaine
-- le moteur Node est la source de verite
-- le serveur MCP est la couche d'exposition principale pour les agents
-- la CLI locale est un adaptateur terminal aligne sur la surface MCP
+- the web UI is the human editing interface
+- the Node engine is the source of truth
+- the MCP server is the main exposure layer for agents
+- the local CLI is a terminal adapter aligned with the MCP surface
 
 ```mermaid
 flowchart LR
-    UI[UI Web / Editeur]
+    UI[Web UI / Editor]
     ENGINE[CV Engine]
-    MCP[MCP Server local]
-    CLI[CLI locale]
-    PDF[PDF Headless]
+    MCP[Local MCP Server]
+    CLI[Local CLI]
+    PDF[Headless PDF]
     HTML[HTML Export]
     JSON[JSON Export]
 
@@ -60,10 +60,25 @@ flowchart LR
 
 ---
 
-## Structure Des Dossiers
+## Repository Structure
 
 ```text
 CV_Generator/
+  bin/
+    cv-generator-mcp.mjs
+  examples/
+    cv-cloud-architect.json
+    cv-devops.json
+    cv-java.json
+    cv-minimal.json
+    cv-sophro.json
+  skills/
+    cv-generator/
+      SKILL.md
+      agents/
+        openai.yaml
+      references/
+        cv-contract.md
   src/
     app.ts
     constants.ts
@@ -96,9 +111,13 @@ CV_Generator/
     mcp/
       server.ts
   scripts/
+    install-skill.sh
+    print-mcp-config.sh
     smoke-pdf.ts
   tests/
     cli.test.ts
+    distribution.test.ts
+    examples.test.ts
     fixtures/
     engine-service.test.ts
     mcp-server.test.ts
@@ -107,85 +126,100 @@ CV_Generator/
 
 ---
 
-## Sous-Systeme 1 - UI Web
+## Subsystem 1 - Web UI
 
 ## Role
 
-La UI web sert a l'edition humaine du CV.
+The web UI is used for human CV editing.
 
-Elle permet :
+It supports:
 
-- la modification inline du contenu
-- le choix du theme
-- le choix de la position de la sidebar
-- l'import/export JSON et HTML
-- la previsualisation
+- inline content editing
+- theme selection
+- sidebar position selection
+- JSON and HTML import / export
+- preview rendering
 
-## Fichiers Principaux
+## Main Files
 
 - [main.ts](./src/main.ts)
 - [app.ts](./src/app.ts)
 - [styles.css](./src/styles.css)
 - [store.ts](./src/store.ts)
 
-## Fonctionnement
+## Runtime Flow
 
 ```mermaid
 flowchart TD
-    A[Utilisateur] --> B[main.ts]
-    B --> C[CvStore]
-    C --> D[renderApp]
-    D --> E[DOM]
-    E --> F[Interactions utilisateur]
-    F --> B
+    A[Browser startup] --> B[main.ts]
+    B --> C[loadInitialState]
+    C --> D[localStorage or sample CV]
+    D --> E[CvStore]
+
+    E --> F["store.subscribe"]
+    F --> G["rerender"]
+    G --> H[measurePreviewValidation]
+    G --> I[renderApp]
+    I --> J[DOM update]
+    J --> K[hydrateQrPlaceholders]
+
+    L[User interactions] --> M[DOM event handlers in main.ts]
+    M --> N["store.update / store.replace"]
+    N --> O[persist to localStorage]
+    N --> P[emit snapshot]
+    P --> G
 
     classDef ui fill:#EAF2FF,stroke:#5B8DEF,color:#1A2D4A,stroke-width:2px;
-    class A,B,C,D,E,F ui;
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P ui;
 ```
 
 ### `main.ts`
 
-Responsabilites :
+Responsibilities:
 
-- chargement de l'etat initial
-- ecoute des evenements DOM
-- orchestration des actions utilisateur
-- rerender de l'application
-- import/export cote navigateur
+- loading initial state
+- hydrating persisted state from `localStorage`
+- listening to DOM events
+- orchestrating user actions
+- running preview validation before UI rendering
+- rerendering the application
+- hydrating QR placeholders after render
+- browser-side import / export
 
 ### `app.ts`
 
-Responsabilites :
+Responsibilities:
 
-- composition du markup HTML
-- rendu du CV
-- rendu des controles d'edition
+- composing the HTML markup
+- rendering the CV
+- rendering editing controls
 
 ### `store.ts`
 
-Responsabilites :
+Responsibilities:
 
-- stockage de l'etat courant
-- diffusion des mises a jour
+- storing the current state
+- persisting state to `localStorage`
+- broadcasting updates
 
 ### `styles.css`
 
-Responsabilites :
+Responsibilities:
 
-- structure visuelle du template
+- visual structure of the template
 - themes
-- presentation print
-- presentation edition / preview
+- print presentation
+- editor / preview presentation
 
 ---
 
-## Sous-Systeme 2 - Modele Metier
+## Subsystem 2 - Business Model
 
 ## Role
 
-Le modele metier decrit la structure d'un CV.
+The business model describes the structure of a CV.
 
-## Fichiers Principaux
+## Main Files
 
 - [types.ts](./src/types.ts)
 - [model.ts](./src/model.ts)
@@ -193,7 +227,7 @@ Le modele metier decrit la structure d'un CV.
 
 ## `types.ts`
 
-Contient :
+Contains:
 
 - `CvData`
 - `HeaderData`
@@ -201,19 +235,19 @@ Contient :
 - `Experience`
 - `SidebarCard`
 - `RenderSettings`
-- types utilitaires de validation
+- validation utility types
 
 ## `model.ts`
 
-Contient :
+Contains:
 
-- normalisation de `CvData`
-- valeurs par defaut
-- creation d'elements
-- manipulation par chemin (`setValueAtPath`, `moveItemAtPath`, etc.)
-- migration douce de certaines valeurs
+- `CvData` normalization
+- default values
+- item creation helpers
+- path-based manipulation (`setValueAtPath`, `moveItemAtPath`, and related helpers)
+- soft migration of selected values
 
-## Schema Logique Du Modele
+## Logical Model Schema
 
 ```mermaid
 classDiagram
@@ -264,47 +298,47 @@ classDiagram
 
 ---
 
-## Sous-Systeme 3 - Validation
+## Subsystem 3 - Validation
 
 ## Role
 
-Le projet contient 2 types de validation :
+The project contains 2 validation modes:
 
-1. validation navigateur
-2. validation Node embarquee
+1. browser validation
+2. embedded Node validation
 
-## Validation Navigateur
+## Browser Validation
 
-Fichiers :
+Files:
 
 - [validation.ts](./src/validation.ts)
 - [validationBrowser.ts](./src/engine/validationBrowser.ts)
 
-Usage :
+Usage:
 
-- feedback visuel dans l'editeur
-- surlignage des depassements
-- estimation de pagination a l'ecran
+- visual feedback in the editor
+- overflow highlighting
+- on-screen pagination estimation
 
-## Validation Node
+## Node Validation
 
-Fichier :
+File:
 
 - [validateNode.ts](./src/engine/validateNode.ts)
 
-Usage :
+Usage:
 
-- validation utilisable hors UI
-- estimation de pagination sans navigateur externe
-- production de `pageCount`, `issues`, `structureMessages`
+- validation outside the UI
+- pagination estimation without an external browser
+- production of `pageCount`, `issues`, and `structureMessages`
 
-## Flux De Validation
+## Validation Flow
 
 ```mermaid
 flowchart LR
     INPUT[CvData] --> NORM[normalizeCvData]
-    NORM --> STRUCT[Validation structurelle]
-    STRUCT --> RENDER[Validation de rendu]
+    NORM --> STRUCT[Structural validation]
+    STRUCT --> RENDER[Render validation]
     RENDER --> RESULT[ValidationResult]
 
     classDef block fill:#EBF8EF,stroke:#3DA35D,color:#183D22,stroke-width:2px;
@@ -313,21 +347,21 @@ flowchart LR
 
 ---
 
-## Sous-Systeme 4 - CV Engine
+## Subsystem 4 - CV Engine
 
 ## Role
 
-Le `CV Engine` est la couche reutilisable.
+The `CV Engine` is the reusable core layer.
 
-Il encapsule :
+It encapsulates:
 
-- la normalisation
-- la validation
-- le rendu HTML
-- le rendu PDF
-- l'acces au schema
+- normalization
+- validation
+- HTML rendering
+- PDF rendering
+- schema access
 
-## Fichiers Principaux
+## Main Files
 
 - [service.ts](./src/engine/service.ts)
 - [renderHtml.ts](./src/engine/renderHtml.ts)
@@ -337,7 +371,7 @@ Il encapsule :
 - [output.ts](./src/engine/output.ts)
 - [qr.ts](./src/engine/qr.ts)
 
-## Organisation Interne
+## Internal Organization
 
 ```mermaid
 flowchart TD
@@ -359,9 +393,9 @@ flowchart TD
 
 ### `service.ts`
 
-Facade principale de l'engine.
+Main engine facade.
 
-Expose :
+Exposes:
 
 - `prepareCvData`
 - `validateCvInput`
@@ -371,97 +405,97 @@ Expose :
 
 ### `renderHtml.ts`
 
-Renderer HTML cote navigateur.
+Browser-side HTML renderer.
 
-Usage :
+Usage:
 
-- export HTML depuis l'UI
+- HTML export from the UI
 
 ### `renderHtmlNode.ts`
 
-Renderer HTML cote Node.
+Node-side HTML renderer.
 
-Usage :
+Usage:
 
-- generation headless
-- source de verite pour le PDF
+- headless generation
+- source of truth for PDF generation
 
 ### `renderPdf.ts`
 
-Facade PDF headless, basee sur `Vivliostyle`.
+Headless PDF facade based on `Vivliostyle`.
 
-Supporte :
+Supports:
 
 - `mode: "paginated"`
 - `mode: "continuous"`
 
 ### `pdfLayout.ts`
 
-Moteur d'estimation de pagination et de mesures de rendu.
+Pagination estimation and render measurement helper.
 
-Responsabilites :
+Responsibilities:
 
-- calcul de pagination
-- estimation des depassements de lignes critiques
+- pagination computation
+- estimation of critical overflow conditions
 
 ### `vivliostyle.ts`
 
-Adaptateur HTML/CSS vers PDF.
+HTML/CSS to PDF adapter.
 
-Responsabilites :
+Responsibilities:
 
-- ecriture d'un HTML temporaire autonome
-- appel a `@vivliostyle/cli`
-- generation du PDF final
-- prise en charge du mode `continuous` avec taille de page calculee
+- writing a self-contained temporary HTML file
+- calling `@vivliostyle/cli`
+- generating the final PDF
+- supporting `continuous` mode with a computed page size
 
 ### `schema.ts`
 
-Expose le JSON Schema de `CvData`.
+Exposes the JSON Schema for `CvData`.
 
 ### `output.ts`
 
-Responsable de l'ecriture securisee des artefacts binaires temporaires.
+Responsible for safe temporary binary artifact writing.
 
 ### `qr.ts`
 
-Responsable de la generation du QR code.
+Responsible for QR code generation.
 
-## Contrat d'entree et separation des parametres
+## Input Contract and Parameter Separation
 
-Le contrat principal du systeme reste `CvData`.
+The main system contract remains `CvData`.
 
-Les parametres se repartissent ainsi :
+Parameters are split as follows:
 
-- parametres metier et rendu dans `cv_data`
-- parametres d'execution au niveau du tool MCP
+- business and rendering parameters live inside `cv_data`
+- execution parameters live at the MCP tool level
 
-Exemples :
+Examples:
 
 - `cv_data.render.theme`
 - `cv_data.render.sidebarPosition`
 - `cv_data.render.maxPages`
 - `generate_cv_pdf.pdf_mode`
-- `generate_cv_pdf.browser_executable_path` (optionnel)
-- `validate_cv.browser_executable_path` (optionnel)
-- `generate_cv_html.browser_executable_path` (optionnel)
+- `generate_cv_pdf.browser_executable_path` (optional)
+- `validate_cv.browser_executable_path` (optional)
+- `generate_cv_html.browser_executable_path` (optional)
 
-Important :
+Important:
 
-- `pageCount` n'est pas un champ metier de `CvData`
-- c'est une metrique calculee par le moteur
+- `pageCount` is not a business field of `CvData`
+- it is a computed metric produced by the engine
 
 ---
 
-## Modes D'Export
+## Export Modes
 
-L'engine supporte 3 formats d'artefacts :
+The engine supports 3 artifact formats:
 
 - `json`
 - `html`
 - `pdf`
 
-## Pipeline D'Export
+## Export Pipeline
 
 ```mermaid
 flowchart LR
@@ -477,39 +511,39 @@ flowchart LR
     class A,B,C,D,E,F,G,H flow;
 ```
 
-### PDF - Mode `paginated`
+### PDF - `paginated` Mode
 
-Comportement :
+Behavior:
 
-- A4
-- pagination CSS/HTML via `Vivliostyle`
-- rendu visuellement aligne sur le template HTML source
+- A4 output
+- CSS / HTML pagination through `Vivliostyle`
+- output visually aligned with the source HTML template
 
-### PDF - Mode `continuous`
+### PDF - `continuous` Mode
 
-Comportement :
+Behavior:
 
-- une seule grande page PDF
-- hauteur calculee selon le contenu estime
-- rendu genere par `Vivliostyle` avec taille de page personnalisee
+- a single large PDF page
+- height computed from estimated content size
+- output generated by `Vivliostyle` with a custom page size
 
-## Regles de pagination
+## Pagination Rules
 
-Quand `render.maxPages` est defini :
+When `render.maxPages` is defined:
 
-- la validation expose `page_limit_exceeded`
-- les exports `html` et `pdf` pagine peuvent refuser le rendu final
-- le mode PDF `continuous` peut rester autorise comme mode de sortie alternatif
+- validation exposes `page_limit_exceeded`
+- `html` export and paginated `pdf` export can reject final rendering
+- `continuous` PDF can remain available as an alternative output mode
 
 ---
 
-## Sous-Systeme 5 - MCP Server
+## Subsystem 5 - MCP Server
 
 ## Role
 
-Le serveur MCP expose le moteur a un agent externe.
+The MCP server exposes the engine to an external agent.
 
-## Fichier Principal
+## Main File
 
 - [server.ts](./src/mcp/server.ts)
 
@@ -517,98 +551,104 @@ Le serveur MCP expose le moteur a un agent externe.
 
 - `stdio`
 
-Le serveur :
+The server:
 
-- n'est pas un serveur HTTP
-- n'est pas la UI
-- tourne en process local
+- is not an HTTP server
+- is not the UI
+- runs as a local process
 
-## Tools Exposes
+Local distribution:
 
-Surface stable beta :
+- the repository provides a `bin/cv-generator-mcp.mjs` binary
+- this binary allows direct execution through `npx`, without going through `npm run mcp`
+- this distribution mainly targets local clients such as Hermes and Claude Code
+
+## Exposed Tools
+
+Stable beta surface:
 
 - `generate_cv_html`
 - `generate_cv_pdf`
 - `validate_cv`
 - `get_cv_schema`
 
-Tools additionnels pour gros payloads :
+Additional tools for large payload workflows:
 
 - `start_cv_chunked_generation`
 - `append_cv_generation_chunk`
 
-## Semantique des tools
+## Tool Semantics
 
 ### `get_cv_schema`
 
-Retourne le schema JSON du contrat `CvData`.
+Returns the JSON schema for the `CvData` contract.
 
-Compatibilite client :
+Client compatibility:
 
-- le schema reste dans `structuredContent.schema`
-- une copie texte du schema est aussi renvoyee dans `content` pour les clients MCP qui n'exposent pas `structuredContent` au modele
+- the schema remains available in `structuredContent.schema`
+- a text copy of the schema is also returned in `content` for MCP clients that do not expose `structuredContent` to the model
 
 ### `validate_cv`
 
-Normalise et valide un `CvData`, puis retourne :
+Normalizes and validates a `CvData`, then returns:
 
-- diagnostics structurels
-- diagnostics de rendu
+- structural diagnostics
+- render diagnostics
 - `page_count`
 - `page_limit_exceeded`
 
 ### `generate_cv_html`
 
-Genere le rendu HTML final a partir d'un `CvData` valide.
+Generates the final HTML output from a valid `CvData`.
 
-Contrainte :
+Constraint:
 
-- appel direct accepte seulement si `JSON.stringify(cv_data).length <= 5000`
-- sinon erreur `cv_data_too_large_for_single_call` et bascule vers workflow chunked
+- direct call accepted only if `JSON.stringify(cv_data).length <= 5000`
+- otherwise error `cv_data_too_large_for_single_call` and fallback to the chunked workflow
 
 ### `generate_cv_pdf`
 
-Genere le rendu PDF final a partir d'un `CvData` valide.
+Generates the final PDF output from a valid `CvData`.
 
-Le tool supporte 2 modes :
+The tool supports 2 modes:
 
 - `paginated`
 - `continuous`
 
-Contrainte :
+Constraint:
 
-- appel direct accepte seulement si `JSON.stringify(cv_data).length <= 5000`
-- sinon erreur `cv_data_too_large_for_single_call` et bascule vers workflow chunked
+- direct call accepted only if `JSON.stringify(cv_data).length <= 5000`
+- otherwise error `cv_data_too_large_for_single_call` and fallback to the chunked workflow
 
 ### `start_cv_chunked_generation`
 
-Cree une session d'upload chunked et retourne un `upload_id`.
+Creates a chunked upload session and returns an `upload_id`.
 
-Important :
+Important:
 
-- le client doit reutiliser exactement cet `upload_id` dans `append_cv_generation_chunk`
-- si un mauvais `upload_id` est envoye et qu'une seule session est active, le serveur peut auto-resoudre la session
+- the client must reuse that exact `upload_id` in `append_cv_generation_chunk`
+- if a wrong `upload_id` is sent and only one session is active, the server can auto-resolve the session
 
-Parametres :
+Parameters:
 
-- `upload_id` (optionnel, identifiant client explicite)
-- `output_format: "pdf" | "html"` (defaut `pdf`)
-- `pdf_mode` (si `output_format = "pdf"`)
-- `browser_executable_path` (optionnel)
+- `upload_id` (optional, explicit client identifier)
+- `output_format: "pdf" | "html"` (default `pdf`)
+- `pdf_mode` (if `output_format = "pdf"`)
+- `browser_executable_path` (optional)
 
 ### `append_cv_generation_chunk`
 
-Ajoute un chunk de JSON dans une session:
+Adds a JSON chunk to a session:
 
-- `chunk_index` 0-based
-- `total_chunks` constant sur toute la session
-- `chunk` limite a 5000 caracteres
+- `chunk_index` is 0-based
+- `total_chunks` remains constant for the whole session
+- `chunk` is limited to 5000 characters
 
-Auto-finalisation :
+Auto-finalization:
 
-- quand tous les chunks sont recus, le serveur reassemble le JSON, valide et genere automatiquement l'artefact cible
+- when all chunks are received, the server reassembles the JSON, validates it, and automatically generates the target artifact
 
-## Flux MCP
+## MCP Flow
 
 ```mermaid
 sequenceDiagram
@@ -635,139 +675,181 @@ sequenceDiagram
     end
 ```
 
-## Comportement du serveur
+## Server Behavior
 
-Pour chaque tool :
+For each tool:
 
-1. reception de l'entree
-2. validation du payload
-3. appel a la facade `engine/service.ts`
-4. construction d'une reponse MCP structuree
+1. receive input
+2. validate the payload
+3. call the `engine/service.ts` facade
+4. build a structured MCP response
 
-En cas d'erreur :
+On error:
 
-- retour `isError: true`
-- `structuredContent` stable
+- return `isError: true`
+- keep `structuredContent` stable
 
 ---
 
-## Sous-Systeme 6 - CLI Locale
+## Subsystem 6 - Local CLI
 
 ## Role
 
-La CLI locale expose les memes capacites metier que le MCP, en mode terminal.
+The local CLI exposes the same business capabilities as MCP through a terminal interface.
 
-Elle permet :
+It supports:
 
-- l'usage scriptable hors chat MCP
-- la validation d'un `cv_data` depuis un fichier JSON
-- la generation HTML/PDF avec un chemin de sortie explicite
-- un contournement pratique des limites de tool-call de certains petits LLM
+- scriptable usage outside MCP chat flows
+- validation of a `cv_data` payload from a JSON file
+- HTML / PDF generation with an explicit output path
+- a practical workaround for tool-call limits of some smaller LLMs
 
-## Fichier Principal
+## Main File
 
 - [cvCli.ts](./src/cli/cvCli.ts)
 
-## Commandes exposees
+## Exposed Commands
 
 - `get-cv-schema`
 - `validate-cv`
 - `generate-cv-html`
 - `generate-cv-pdf`
 
-## Semantique
+## Semantics
 
-- workflow recommande: `get-cv-schema -> validate-cv -> generate-cv-pdf/html`
-- sortie JSON stable sur `stdout`
-- code de sortie `0` en succes, `1` en erreur
+- recommended workflow: `get-cv-schema -> validate-cv -> generate-cv-pdf/html`
+- stable JSON output on `stdout`
+- exit code `0` on success, `1` on error
 
 ---
 
-## Sous-Systeme 7 - Tests
+## Subsystem 7 - Skill Bundle
 
 ## Role
 
-Verifier :
+The repository includes a portable skill bundle to guide agents that consume the MCP server.
 
-- le schema
-- le moteur
-- le PDF
-- le serveur MCP
-- la CLI
+This skill:
 
-## Fichiers Principaux
+- does not implement business logic
+- does not replace MCP
+- documents the recommended workflow (`schema -> validate -> generate`)
+- helps clients such as Hermes and Claude Code use the public tools correctly
+
+## Main Files
+
+- [skills/cv-generator/SKILL.md](./skills/cv-generator/SKILL.md)
+- [skills/cv-generator/references/cv-contract.md](./skills/cv-generator/references/cv-contract.md)
+- [skills/cv-generator/agents/openai.yaml](./skills/cv-generator/agents/openai.yaml)
+
+## Local Distribution
+
+The repository also provides two convenience shell scripts:
+
+- [install-skill.sh](./scripts/install-skill.sh)
+- [print-mcp-config.sh](./scripts/print-mcp-config.sh)
+
+These scripts are used to:
+
+- copy the skill into a local Hermes or Claude Code skill directory
+- print the MCP configuration snippet to copy and paste
+
+---
+
+## Subsystem 8 - Tests
+
+## Role
+
+Verify:
+
+- the schema
+- the engine
+- PDF generation
+- the MCP server
+- the CLI
+
+## Main Files
 
 - [engine-service.test.ts](./tests/engine-service.test.ts)
 - [render-pdf.test.ts](./tests/render-pdf.test.ts)
 - [mcp-server.test.ts](./tests/mcp-server.test.ts)
 - [cli.test.ts](./tests/cli.test.ts)
+- [examples.test.ts](./tests/examples.test.ts)
+- [distribution.test.ts](./tests/distribution.test.ts)
 
-## Couverture Actuelle
+## Current Coverage
 
 ### Engine
 
-- schema accessible
-- normalisation
-- generation HTML
+- schema access
+- normalization
+- HTML generation
 
 ### PDF
 
-- generation PDF valide
-- mode pagine via `Vivliostyle`
-- mode continu via `Vivliostyle`
-- aucun chemin de navigateur systeme a fournir dans le flux MCP normal
-- possibilite d'override explicite via `browser_executable_path` si l'environnement headless local est incomplet
+- valid PDF generation
+- paginated mode through `Vivliostyle`
+- continuous mode through `Vivliostyle`
+- no system browser path required in the normal MCP flow
+- explicit `browser_executable_path` override available if the local headless environment is incomplete
 
 ### MCP
 
-- listing des tools
+- tool listing
 - schema
-- generation HTML
-- generation PDF continue
-- limite 5000 chars en appel direct
-- workflow chunked avec auto-finalisation
+- HTML generation
+- continuous PDF generation
+- 5000-character direct-call limit
+- chunked workflow with auto-finalization
+- packaged launcher `bin/cv-generator-mcp.mjs`
 
 ### CLI
 
-- aide globale et aide par commande
-- schema, validation et generation HTML
-- format de sortie JSON stable
+- global help and per-command help
+- schema, validation, and HTML generation
+- stable JSON output format
+
+### Local Distribution
+
+- presence of the embedded skill
+- Hermes / Claude Code configuration snippets
+- local skill copy through a shell script
 
 ---
 
-## Frontieres Techniques
+## Technical Boundaries
 
-## Ce qui reste cote navigateur
+## What remains browser-side
 
-- edition
+- editing
 - preview
-- feedback visuel
-- export HTML navigateur
-- import/export JSON navigateur
-- impression utilisateur via navigateur
+- visual feedback
+- browser HTML export
+- browser JSON import / export
+- user-initiated browser printing
 
-## Ce qui reste cote Node
+## What remains Node-side
 
-- rendu PDF headless
-- validation headless
-- schema JSON
-- exposition MCP
-- exposition CLI
-- ecriture de fichiers PDF temporaires
+- headless PDF rendering
+- headless validation
+- JSON schema
+- MCP exposure
+- CLI exposure
+- temporary PDF file writing
 
-## Regle De Separation
+## Separation Rule
 
-Le front ne doit pas importer de code Node-only.
+The frontend must not import Node-only code.
 
-En particulier :
+In particular:
 
-- pas de `playwright-core` dans le bundle web
-- pas de `fs` / `node:*` dans l'UI
-- pas d'import `@vivliostyle/cli` dans le bundle web
+- no `playwright-core` in the web bundle
+- no `fs` / `node:*` in the UI
+- no `@vivliostyle/cli` import in the web bundle
 
 ---
 
-## Points D'Entree
+## Entry Points
 
 ## UI
 
@@ -777,90 +859,109 @@ En particulier :
 
 - [server.ts](./src/mcp/server.ts)
 
+## MCP Package
+
+- [cv-generator-mcp.mjs](./bin/cv-generator-mcp.mjs)
+
 ## CLI
 
 - [cvCli.ts](./src/cli/cvCli.ts)
 
-## Smoke PDF
+## PDF Smoke Test
 
 - [smoke-pdf.ts](./scripts/smoke-pdf.ts)
 
+## Skill Bundle
+
+- [skills/cv-generator/SKILL.md](./skills/cv-generator/SKILL.md)
+
 ---
 
-## Commandes Principales
+## Main Commands
 
-### Lancer l'UI
+### Run the UI
 
-```powershell
-npm.cmd run dev
+```bash
+npm run dev
 ```
 
 ### Build
 
-```powershell
-npm.cmd run build
+Current status:
+
+- `npm run build` exists but still fails until the TypeScript errors in `src/cli/cvCli.ts` are fixed
+- this does not block MCP tests or local `npx` packaging
+
+```bash
+npm run build
 ```
 
 ### Tests
 
-```powershell
-npm.cmd test
+```bash
+npm test
 ```
 
-### Lancer le MCP
+### Run MCP
 
-```powershell
-npm.cmd run mcp
+```bash
+npm run mcp
 ```
 
-### Lancer le CLI (surface alignee MCP)
+### Run MCP through the local package
 
-```powershell
-npm.cmd run cli -- --help
+```bash
+npx -y @xclem/cv-generator-mcp
 ```
 
-Exemples :
+### Run the CLI
 
-```powershell
-npm.cmd run cli -- get-cv-schema
-npm.cmd run cli -- validate-cv --cv-data .\examples\cv-minimal.json
-npm.cmd run cli -- generate-cv-html --cv-data .\examples\cv-minimal.json --output .\cv-output.html
-npm.cmd run cli -- generate-cv-pdf --cv-data .\examples\cv-minimal.json --pdf-mode paginated --output .\cv-output.pdf
+```bash
+npm run cli -- --help
 ```
 
-### Smoke PDF pagine
+Examples:
 
-```powershell
-npm.cmd run smoke:pdf
+```bash
+npm run cli -- get-cv-schema
+npm run cli -- validate-cv --cv-data ./examples/cv-minimal.json
+npm run cli -- generate-cv-html --cv-data ./examples/cv-minimal.json --output ./cv-output.html
+npm run cli -- generate-cv-pdf --cv-data ./examples/cv-minimal.json --pdf-mode paginated --output ./cv-output.pdf
 ```
 
-### Smoke PDF continu
+### Paginated PDF smoke test
 
-```powershell
-$env:CV_PDF_MODE="continuous"
-npm.cmd run smoke:pdf
+```bash
+npm run smoke:pdf
 ```
 
-### Smoke PDF avec navigateur force (optionnel)
+### Continuous PDF smoke test
 
-```powershell
-$env:CV_BROWSER_EXECUTABLE_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe"
-npm.cmd run smoke:pdf
+```bash
+CV_PDF_MODE=continuous npm run smoke:pdf
 ```
+
+### Smoke test with a forced browser path
+
+```bash
+CV_BROWSER_EXECUTABLE_PATH="/usr/bin/google-chrome" npm run smoke:pdf
+```
+
+On Windows PowerShell, use `$env:CV_PDF_MODE="continuous"` and `$env:CV_BROWSER_EXECUTABLE_PATH="C:\..."`.
 
 ---
 
-## Cycle De Vie D'Un CV
+## CV Lifecycle
 
 ```mermaid
 flowchart TD
-    A[UI / MCP Client / CLI] --> B[Etat CvData]
-    B --> C[Normalisation]
+    A[UI / MCP Client / CLI] --> B[CvData state]
+    B --> C[Normalization]
     C --> D[Validation]
     D --> E[HTML]
     D --> F[PDF]
-    D --> G[Reponse MCP]
-    D --> H[Sortie CLI JSON]
+    D --> G[MCP response]
+    D --> H[CLI JSON output]
 
     classDef lifecycle fill:#EBF8EF,stroke:#3DA35D,color:#183D22,stroke-width:2px;
     class A,B,C,D,E,F,G,H lifecycle;
@@ -868,28 +969,30 @@ flowchart TD
 
 ---
 
-## Resume
+## Summary
 
-L'application fonctionne comme suit :
+The application works as follows:
 
-- la UI web edite un `CvData`
-- le moteur transforme ce `CvData` en HTML, PDF ou validation
-- le serveur MCP expose ce moteur a un agent externe
-- la CLI locale expose le meme moteur en mode terminal
+- the web UI edits a `CvData`
+- the engine transforms that `CvData` into HTML, PDF, or validation output
+- the MCP server exposes the engine to an external agent
+- the local CLI exposes the same engine in terminal form
+- a portable skill can guide a local client toward correct MCP usage
 
-Le coeur du systeme est donc :
+The core of the system is therefore:
 
-- **le modele `CvData`**
-- **la facade `engine/service.ts`**
+- **the `CvData` model**
+- **the `engine/service.ts` facade**
 
-Et les trois consommateurs principaux sont :
+And the main consumers are:
 
-- **l'UI**
-- **le MCP**
-- **la CLI**
+- **the UI**
+- **the MCP layer**
+- **the CLI**
 
-L'architecture est aussi pensee pour rester compatible avec d'autres couches d'appel locales, par exemple :
+The architecture is also designed to stay compatible with other local calling layers, for example:
 
-- des scripts shell / CI
-- un bridge MCP pour LM Studio
-- d'autres clients capables de lancer un process local
+- shell / CI scripts
+- an MCP bridge for LM Studio
+- other clients able to launch a local process
+- local tool-enabled clients such as Hermes or Claude Code

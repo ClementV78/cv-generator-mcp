@@ -1,185 +1,262 @@
 # CV Generator
 
-Generateur de CV avec :
+CV Generator includes:
 
-- une **UI web locale** pour l'edition humaine
-- un **moteur Node** pour le rendu et la validation
-- un **serveur MCP local** pour l'usage par LLM / agents
-- une **CLI locale** pour scripts et integrations hors chat MCP
+- a local **web UI** for human editing
+- a reusable **Node engine** for rendering and validation
+- a local **MCP server** for LLM / agent usage
+- a local **CLI** for scripts and non-chat integrations
 
-Le coeur public du projet est `engine + MCP`.
-L'UI et la CLI restent incluses pour un usage local, mais la surface agent publique reste prioritairement `MCP`.
+The public core of the project is `engine + MCP`.
+The UI and CLI remain part of the repository for local use, but the main public agent-facing surface is `MCP`.
 
-## Ce que fait le projet
+## What the project does
 
-- genere un CV HTML a partir d'un JSON `CvData`
-- genere un CV PDF headless
-- valide la structure et la pagination d'un CV
-- expose ces capacites via MCP local et CLI locale
+- generates an HTML CV from a `CvData` JSON payload
+- generates a headless PDF CV
+- validates CV structure and pagination
+- exposes these capabilities through a local MCP server and a local CLI
 
-Tools MCP publics :
+Public MCP tools:
 
 - `generate_cv_html`
 - `generate_cv_pdf`
 - `validate_cv`
 - `get_cv_schema`
 
-Tools MCP additionnels (workflow gros payloads) :
+Additional MCP tools for large payload workflows:
 
 - `start_cv_chunked_generation`
 - `append_cv_generation_chunk`
 
-## Trois usages
+## Three usage modes
 
-### 1. Usage local humain
+### 1. Local human usage
 
-Editeur web pour :
+The web editor supports:
 
-- modifier le contenu
-- choisir le theme
-- regler la sidebar
-- importer/exporter du JSON
-- previsualiser le rendu
+- editing content
+- choosing the theme
+- configuring the sidebar
+- importing / exporting JSON
+- previewing the rendered output
 
-### 2. Usage LLM / agent
+### 2. LLM / agent usage
 
-Serveur MCP local pour :
+The local MCP server supports:
 
-- valider un `CvData`
-- generer du HTML
-- generer du PDF `paginated | continuous`
-- recuperer le schema JSON
-- generer en mode chunked quand `cv_data` depasse 5000 caracteres
+- validating a `CvData` payload
+- generating HTML
+- generating PDF in `paginated | continuous` mode
+- retrieving the JSON schema
+- generating through a chunked workflow when `cv_data` exceeds 5000 characters
 
-Important :
+Important:
 
-- le tool n'appelle jamais l'UI
-- il appelle le moteur Node
-- le serveur MCP tourne en `stdio`, pas en HTTP
+- the MCP tool never calls the UI
+- it calls the Node engine
+- the MCP server runs over `stdio`, not HTTP
+- for fake or realistic CV generation, starting from an existing example in `examples/` is more reliable than rebuilding JSON manually in an intermediate script
 
-### 3. Usage script / terminal
+### 3. Script / terminal usage
 
-CLI locale alignee sur la surface MCP pour :
+The local CLI is aligned with the MCP surface and supports:
 
-- recuperer le schema `CvData`
-- valider un fichier `cv_data` JSON
-- generer un HTML
-- generer un PDF `paginated | continuous`
+- retrieving the `CvData` schema
+- validating a JSON `cv_data` file
+- generating HTML
+- generating PDF in `paginated | continuous` mode
 
-## Prerequis
+## Prerequisites
 
 - Node.js
-- dependances npm installees
-- aucun chemin de navigateur systeme a fournir dans le flux MCP normal
+- npm dependencies installed
+- no system browser path is required in the normal MCP flow
 
 ## Installation
 
-```powershell
-npm.cmd install
+```bash
+npm install
 ```
 
-## Commandes principales
+## Integrations
 
-### UI locale
+Supported in this version:
 
-```powershell
-npm.cmd run dev
+- local Hermes
+- local Claude Code
+
+Out of scope in this version:
+
+- Claude.ai
+- HTTP-hosted MCP
+
+### Publish the MCP package manually
+
+```bash
+npm login
+npm publish --access public
+```
+
+Published package name:
+
+- `@xclem/cv-generator-mcp`
+
+### Install the skill locally
+
+For Hermes:
+
+```bash
+sh scripts/install-skill.sh hermes
+```
+
+For Claude Code:
+
+```bash
+sh scripts/install-skill.sh claude-code
+```
+
+### Hermes MCP config
+
+```yaml
+mcp_servers:
+  cv_generator:
+    command: "npx"
+    args:
+      - "-y"
+      - "@xclem/cv-generator-mcp"
+    timeout: 180
+    connect_timeout: 60
+```
+
+### Claude Code MCP config
+
+```bash
+claude mcp add cv-generator -- npx -y @xclem/cv-generator-mcp
+```
+
+### Repo-shipped skill
+
+The portable skill bundle lives in:
+
+- `skills/cv-generator/SKILL.md`
+- `skills/cv-generator/references/cv-contract.md`
+- `skills/cv-generator/agents/openai.yaml`
+
+## Main commands
+
+### Local UI
+
+```bash
+npm run dev
 ```
 
 ### Build
 
-```powershell
-npm.cmd run build
+Current status:
+
+- `npm run build` exists but still fails because of TypeScript errors in `src/cli/cvCli.ts`
+- local MCP packaging, tests, and the `npx` launcher are valid
+
+```bash
+npm run build
 ```
 
 ### Tests
 
-```powershell
-npm.cmd test
+```bash
+npm test
 ```
 
-### Smoke test PDF
+### PDF smoke test
 
-```powershell
-npm.cmd run smoke:pdf
+```bash
+npm run smoke:pdf
 ```
 
-Mode PDF continu :
+Continuous PDF mode:
 
-```powershell
-$env:CV_PDF_MODE="continuous"
-npm.cmd run smoke:pdf
+```bash
+CV_PDF_MODE=continuous npm run smoke:pdf
 ```
 
-Forcer un navigateur systeme specifique (optionnel) :
+Force a specific system browser path if needed:
 
-```powershell
-$env:CV_BROWSER_EXECUTABLE_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe"
-npm.cmd run smoke:pdf
+```bash
+CV_BROWSER_EXECUTABLE_PATH="/usr/bin/google-chrome" npm run smoke:pdf
 ```
 
-### Serveur MCP
+On Windows PowerShell, use `$env:CV_PDF_MODE="continuous"` and `$env:CV_BROWSER_EXECUTABLE_PATH="C:\..."`.
 
-```powershell
-npm.cmd run mcp
+### MCP server
+
+```bash
+npm run mcp
 ```
 
-### CLI locale (meme surface que MCP)
+Packaged local version through `npx`:
 
-```powershell
-npm.cmd run cli -- --help
+```bash
+npx -y @xclem/cv-generator-mcp
+```
+
+### Local CLI
+
+```bash
+npm run cli -- --help
 ```
 
 Schema:
 
-```powershell
-npm.cmd run cli -- get-cv-schema
+```bash
+npm run cli -- get-cv-schema
 ```
 
 Validation:
 
-```powershell
-npm.cmd run cli -- validate-cv --cv-data .\examples\cv-minimal.json
+```bash
+npm run cli -- validate-cv --cv-data ./examples/cv-minimal.json
 ```
 
-Generation HTML:
+HTML generation:
 
-```powershell
-npm.cmd run cli -- generate-cv-html --cv-data .\examples\cv-minimal.json --output .\cv-output.html
+```bash
+npm run cli -- generate-cv-html --cv-data ./examples/cv-minimal.json --output ./cv-output.html
 ```
 
-Generation PDF:
+PDF generation:
 
-```powershell
-npm.cmd run cli -- generate-cv-pdf --cv-data .\examples\cv-minimal.json --pdf-mode paginated --output .\cv-output.pdf
+```bash
+npm run cli -- generate-cv-pdf --cv-data ./examples/cv-minimal.json --pdf-mode paginated --output ./cv-output.pdf
 ```
 
-Options alignees MCP:
+MCP-aligned options:
 
 - `--pdf-mode` / `--pdf_mode` (`paginated | continuous`)
 - `--browser-executable-path` / `--browser_executable_path`
 - `--cv-data` / `--cv_data` / `--input`
 
-## Exemples JSON
+## JSON examples
 
-Des exemples publics sont fournis dans `examples/` :
+Public examples are provided in `examples/`:
 
+- `examples/cv-cloud-architect.json`
 - `examples/cv-minimal.json`
 - `examples/cv-devops.json`
 - `examples/cv-java.json`
 - `examples/cv-sophro.json`
 
-## Contrat d'entree
+## Input contract
 
-Le contrat principal reste `CvData`.
+The main input contract remains `CvData`.
 
-Les regles utiles a retenir :
+The main rules to remember are:
 
-- les parametres metier et de rendu vivent dans `cv_data`
-- `theme`, `sidebarPosition` et `maxPages` vivent dans `cv_data.render`
-- `pdf_mode` et `browser_executable_path` (optionnel) sont des parametres d'execution des tools MCP, pas des champs metier du CV
+- business and render settings live inside `cv_data`
+- `theme`, `sidebarPosition`, and `maxPages` live inside `cv_data.render`
+- `pdf_mode` and `browser_executable_path` (optional) are MCP execution parameters, not business fields of the CV
 
-Exemple :
+Example:
 
 ```json
 {
@@ -194,11 +271,11 @@ Exemple :
 }
 ```
 
-## Exemples d'usage logique
+## Logical usage examples
 
 ### Validation
 
-Le client MCP envoie :
+The MCP client sends:
 
 ```json
 {
@@ -210,13 +287,13 @@ Le client MCP envoie :
       "location": "Paris, France",
       "email": "alex.martin@example.com",
       "linkedin": "linkedin.com/in/alex-martin",
-      "availabilityText": "Disponible pour des missions DevOps et Cloud",
-      "qrCodeLabel": "Version web",
+      "availabilityText": "Available for DevOps and Cloud engagements",
+      "qrCodeLabel": "Web version",
       "qrCodeUrl": "https://example.com/cv/alex-martin",
       "showQrCode": true
     },
-    "profileLabel": "Profil professionnel",
-    "profile": "Ingenieur DevOps avec experience en automatisation, CI/CD et cloud public.",
+    "profileLabel": "Professional profile",
+    "profile": "DevOps engineer with experience in automation, CI/CD, and public cloud.",
     "skillGroups": [],
     "highlights": [],
     "certifications": [],
@@ -225,8 +302,8 @@ Le client MCP envoie :
     "experiences": [],
     "mainEducation": {
       "enabled": true,
-      "title": "Formation",
-      "summary": "Master Informatique."
+      "title": "Education",
+      "summary": "Master's degree in Computer Science."
     },
     "render": {
       "mode": "preview",
@@ -238,9 +315,9 @@ Le client MCP envoie :
 }
 ```
 
-### Generation HTML
+### HTML generation
 
-Tool :
+Tool call:
 
 ```json
 {
@@ -251,9 +328,9 @@ Tool :
 }
 ```
 
-### Generation PDF
+### PDF generation
 
-Tool :
+Tool call:
 
 ```json
 {
@@ -266,7 +343,7 @@ Tool :
 }
 ```
 
-Ou :
+Or:
 
 ```json
 {
@@ -278,20 +355,20 @@ Ou :
 }
 ```
 
-## Tools MCP
+## MCP tools
 
 ### `get_cv_schema`
 
-Retourne le JSON Schema du contrat `CvData`.
+Returns the JSON Schema for the `CvData` contract.
 
-Compatibilite clients MCP :
+MCP client compatibility:
 
-- le schema complet est present dans `structuredContent.schema`
-- il est aussi duplique dans `content[].text` pour les clients qui n'exposent pas `structuredContent` au LLM
+- the complete schema is returned in `structuredContent.schema`
+- a text copy is also duplicated in `content[].text` for clients that do not expose `structuredContent` to the model
 
 ### `validate_cv`
 
-Valide un `CvData`, normalise l'entree et retourne :
+Validates a `CvData`, normalizes the input, and returns:
 
 - `page_count`
 - `page_limit_exceeded`
@@ -301,128 +378,128 @@ Valide un `CvData`, normalise l'entree et retourne :
 
 ### `generate_cv_html`
 
-Genere le HTML final du CV sans chrome d'edition.
+Generates the final CV HTML without editor chrome.
 
-Limite appel direct :
+Direct-call limit:
 
-- `cv_data` stringify <= `5000` caracteres
-- sinon, utiliser le workflow chunked
+- `cv_data` stringified length must be `<= 5000`
+- otherwise, use the chunked workflow
 
 ### `generate_cv_pdf`
 
-Genere un PDF via `Vivliostyle` a partir du HTML/CSS du template :
+Generates a PDF through `Vivliostyle` from the HTML/CSS template:
 
-- `pdf_mode: "paginated"` pour un CV classique
-- `pdf_mode: "continuous"` pour un export monobloc plus oriente lecture ecran
+- `pdf_mode: "paginated"` for a classic CV
+- `pdf_mode: "continuous"` for a single-flow export better suited to screen reading
 
-Limite appel direct :
+Direct-call limit:
 
-- `cv_data` stringify <= `5000` caracteres
-- sinon, utiliser le workflow chunked
+- `cv_data` stringified length must be `<= 5000`
+- otherwise, use the chunked workflow
 
 ### `start_cv_chunked_generation`
 
-Ouvre une session chunked et retourne un `upload_id`.
+Opens a chunked upload session and returns an `upload_id`.
 
-Important :
+Important:
 
-- reutiliser exactement cet `upload_id` dans `append_cv_generation_chunk`
-- si le client envoie un mauvais `upload_id` et qu'une seule session est active, le serveur tente un auto-rattrapage
+- reuse that exact `upload_id` in `append_cv_generation_chunk`
+- if the client sends a wrong `upload_id` and only one session is active, the server attempts an automatic recovery
 
-Parametres :
+Parameters:
 
-- `upload_id` (optionnel, id client explicite)
-- `output_format: "pdf" | "html"` (defaut `pdf`)
-- `pdf_mode: "paginated" | "continuous"` (utilise seulement pour `pdf`)
-- `browser_executable_path` (optionnel)
+- `upload_id` (optional, explicit client identifier)
+- `output_format: "pdf" | "html"` (default `pdf`)
+- `pdf_mode: "paginated" | "continuous"` (used only for `pdf`)
+- `browser_executable_path` (optional)
 
 ### `append_cv_generation_chunk`
 
-Ajoute un fragment JSON a une session chunked.
+Appends a JSON fragment to a chunked session.
 
-Parametres :
+Parameters:
 
 - `upload_id`
 - `chunk_index` (0-based)
 - `total_chunks`
-- `chunk` (<= `5000` caracteres)
+- `chunk` (`<= 5000` characters)
 
-Comportement :
+Behavior:
 
-- tant que tous les chunks ne sont pas recus: reponse `upload_completed: false`
-- au dernier chunk: reassemblage JSON + validation + generation automatique (`html` ou `pdf`)
+- until all chunks are received: response `upload_completed: false`
+- on the last chunk: JSON reassembly + validation + automatic generation (`html` or `pdf`)
 
-Notes utiles :
+Useful notes:
 
-- le backend PDF principal est `@vivliostyle/cli`
-- le rendu est donc beaucoup plus proche du HTML/CSS source que l'ancien PDF reconstruit a la main
-- le tool MCP ne demande pas de chemin de navigateur systeme dans le cas nominal
-- `browser_executable_path` reste disponible en override optionnel si l'environnement headless local est incomplet
-- le premier rendu PDF peut etre plus lent, le temps que le runtime headless soit pret
-- le choix de ce backend implique aussi de surveiller sa licence et son impact de distribution
+- the main PDF backend is `@vivliostyle/cli`
+- rendering is therefore much closer to the source HTML/CSS than the old manually reconstructed PDF approach
+- the MCP tool does not require a system browser path in the nominal case
+- `browser_executable_path` remains available as an optional override if the local headless environment is incomplete
+- the first PDF render can be slower while the headless runtime becomes ready
+- this backend choice also means its license and distribution impact should be tracked
 
-## Limite de taille pour la generation MCP
+## Size limit for MCP generation
 
-Pour `generate_cv_html` et `generate_cv_pdf` :
+For `generate_cv_html` and `generate_cv_pdf`:
 
-- le serveur refuse les appels directs si `JSON.stringify(cv_data).length > 5000`
-- code d'erreur : `cv_data_too_large_for_single_call`
+- the server rejects direct calls if `JSON.stringify(cv_data).length > 5000`
+- error code: `cv_data_too_large_for_single_call`
 
-Workflow recommande pour les gros CV :
+Recommended workflow for large CVs:
 
 1. `start_cv_chunked_generation`
-2. `append_cv_generation_chunk` pour chaque fragment (`chunk_index` de `0` a `total_chunks - 1`)
-3. le serveur finalise automatiquement au dernier chunk
+2. `append_cv_generation_chunk` for each fragment (`chunk_index` from `0` to `total_chunks - 1`)
+3. the server finalizes automatically on the last chunk
 
-## Comportement en cas de depassement de pages
+## Behavior when the page limit is exceeded
 
-Si `cv_data.render.maxPages` est defini et que le rendu le depasse :
+If `cv_data.render.maxPages` is defined and the rendered result exceeds it:
 
-- `validate_cv` retourne `page_limit_exceeded: true`
-- `generate_cv_html` retourne une erreur structuree
-- `generate_cv_pdf` retourne une erreur structuree en mode `paginated`
-- `generate_cv_pdf` reste autorise en mode `continuous`
+- `validate_cv` returns `page_limit_exceeded: true`
+- `generate_cv_html` returns a structured error
+- `generate_cv_pdf` returns a structured error in `paginated` mode
+- `generate_cv_pdf` remains allowed in `continuous` mode
 
-## Compatibilite cible
+## Target compatibility
 
-Le projet est concu d'abord pour :
+The project is designed first for:
 
 - Claude Agent SDK
 - OpenClaw / NanoClaw
-- LM Studio via wrapper / bridge MCP adequat
+- LM Studio through an appropriate MCP wrapper / bridge
 
-L'idee cle :
+The key idea is:
 
-- le moteur est independant
-- le MCP est la couche d'exposition principale
+- the engine is independent
+- MCP is the main exposure layer
 
 ## Documentation
 
-Documents principaux :
+Main documents:
 
-- [Architecture applicative](./APPLICATION_ARCHITECTURE_CV_GENERATOR.md)
+- [Application architecture](./APPLICATION_ARCHITECTURE_CV_GENERATOR.md)
 
-## Etat de la beta V1
+## Beta V1 status
 
-Beta V1 = projet publiable sur GitHub avec :
+Beta V1 means a repository that is ready to publish on GitHub with:
 
-- moteur Node fonctionnel
-- serveur MCP local
-- UI locale conservee
-- exemples JSON
-- build et tests reproductibles
+- a working Node engine
+- a local MCP server
+- the local UI preserved
+- public JSON examples
+- reproducible tests
 
-Ce n'est pas encore :
+It is not yet:
 
-- un package npm public
-- un conteneur Docker officiel
-- un produit avec compatibilite garantie sur tous les environnements
+- a fully stable public npm package
+- an official Docker container
+- a product with guaranteed compatibility across all environments
 
-## Licence
+## License
 
 MIT
 
-Note :
+Notes:
 
-- le projet est sous licence `MIT`
-- certaines dependances peuvent avoir leur propre licence ; en particulier, le backend PDF actuel `@vivliostyle/cli` doit etre verifie avant une publication communautaire plus large
+- the project itself is under the `MIT` license
+- some dependencies may have their own license; in particular, the current PDF backend `@vivliostyle/cli` should be reviewed before broader community distribution

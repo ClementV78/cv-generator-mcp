@@ -1,0 +1,120 @@
+{
+  "header": {
+    "name": "Paul Charrier",
+    "badgeText": "P.C",
+    "headline": "CLOUD ARCHITECT | AWS | GCP | TERRAFORM",
+    "location": "Poitier, France",
+    "email": "paul.charrier@example.com",
+    "linkedin": "linkedin.com/in/paul-charrier-cloud",
+    "availabilityText": "Disponible pour des missions d'architecture cloud, de migration et de plateforme.",
+    "qrCodeLabel": "Version web",
+    "qrCodeUrl": "https://example.com/cv/paul-charrier",
+    "showQrCode": true
+  },
+  "profileLabel": "Profil professionnel",
+  "profile": "Architecte cloud avec 5 ans d'experience dans la conception et l'exploitation de plateformes securisees, automatisees et resilientes sur AWS et Google Cloud. J'accompagne des equipes produit et infra sur les sujets d'architecture, de migration, de gouvernance et d'optimisation des couts.",
+  "skillGroups": [
+    {
+      "id": "sg-cloud",
+      "title": "Cloud & Plateforme",
+      "type": "bars",
+      "items": [
+        { "id": "aws", "label": "AWS", "level": 93 },
+        { "id": "gcp", "label": "Google Cloud", "level": 88 },
+        { "id": "k8s", "label": "Kubernetes", "level": 84 },
+        { "id": "terraform", "label": "Terraform", "level": 91 },
+        { "id": "security", "label": "Cloud Security", "level": 82 }
+      ]
+    },
+    {
+      "id": "sg-tools",
+      "title": "Langages & Outils",
+      "type": "tags",
+      "items": [
+        { "id": "python", "label": "Python" },
+        { "id": "bash", "label": "Bash" },
+        { "id": "ansible", "label": "Ansible" },
+        { "id": "gitlab-ci", "label": "GitLab CI" },
+        { "id": "vault", "label": "Vault" },
+        { "id": "grafana", "label": "Grafana" }
+      ]
+    }
+  ],
+  "highlights": [
+    { "id": "h1", "text": "Modernisation d'une plateforme multi-cloud pour 4 equipes produit." },
+    { "id": "h2", "text": "Reduction de 28 % des couts cloud via rightsizing, reservations et gouvernance." },
+    { "id": "h3", "text": "Standardisation des pratiques IaC, securite et observabilite." }
+  ],
+  "certifications": [
+    { "id": "c1", "icon": "certification", "title": "AWS Certified Solutions Architect - Professional", "subtitle": "2024" },
+    { "id": "c2", "icon": "certification", "title": "Google Professional Cloud Architect", "subtitle": "2023" }
+  ],
+  "formations": [
+    {
+      "id": "f1",
+      "icon": "formation",
+      "title": "Master Informatique",
+      "subtitle": "Universite de Versailles Saint-Quentin-en-Yvelines",
+      "meta": "2019"
+    }
+  ],
+  "languages": [
+    { "id": "l1", "title": "Francais", "subtitle": "langue maternelle" },
+    { "id": "l2", "title": "Anglais", "subtitle": "courant professionnel" }
+  ],
+  "experiences": [
+    {
+      "id": "exp-cloudscale",
+      "company": "CloudScale Partners",
+      "role": "Cloud Architect",
+      "period": "2021 - Present",
+      "subtitle": "Architecture de plateformes multi-cloud pour des equipes produit et data.",
+      "bullets": [
+        { "id": "exp-cloudscale-b1", "text": "Conception d'une base d'architecture AWS/GCP securisee pour des services critiques et des environnements de data platform." },
+        { "id": "exp-cloudscale-b2", "text": "Mise en place de modules Terraform standardises et de pipelines GitLab CI pour industrialiser les deploiements." },
+        { "id": "exp-cloudscale-b3", "text": "Pilotage des couts, de la gouvernance IAM et des controles de conformite pour reduire les risques operationnels." }
+      ],
+      "techEnvironmentLabel": "Environnement technique",
+      "techEnvironment": "AWS, GCP, Kubernetes, Terraform, Vault, GitLab CI, Prometheus",
+      "projects": [
+        {
+          "id": "proj-platform",
+          "title": "Socle de plateforme multi-routes",
+          "period": "2024",
+          "bullets": [
+            { "id": "proj-platform-b1", "text": "Definition d'un landing zone multi-comptes avec politiques IAM et tagging centralises." },
+            { "id": "proj-platform-b2", "text": "Automatisation du monitoring et des alertes pour les composants critiques de la plateforme." }
+          ],
+          "techEnvironmentLabel": "Stack projet",
+          "techEnvironment": "AWS, Terraform, CloudWatch, Grafana"
+        }
+      ]
+    },
+    {
+      "id": "exp-datanova",
+      "company": "DataNova Consulting",
+      "role": "Cloud Engineer",
+      "period": "2020 - 2021",
+      "subtitle": "Migration et fiabilisation de workloads applicatifs vers le cloud.",
+      "bullets": [
+        { "id": "exp-datanova-b1", "text": "Migration de services applicatifs et de donnees vers AWS avec une approche progressive et securisee." },
+        { "id": "exp-datanova-b2", "text": "Automatisation des runbooks d'exploitation et des controles IaC pour accelerer les livraisons." },
+        { "id": "exp-datanova-b3", "text": "Accompagnement des equipes projet sur la conteneurisation, la supervision et la gestion des secrets." }
+      ],
+      "techEnvironmentLabel": "Environnement technique",
+      "techEnvironment": "AWS, Ansible, Docker, CloudWatch, Prometheus",
+      "projects": []
+    }
+  ],
+  "mainEducation": {
+    "enabled": true,
+    "title": "Formation",
+    "summary": "Master Informatique - Universite de Versailles Saint-Quentin-en-Yvelines (2019)."
+  },
+  "render": {
+    "mode": "preview",
+    "maxPages": 2,
+    "theme": "graphite",
+    "sidebarPosition": "left"
+  }
+}
