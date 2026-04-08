@@ -10,6 +10,28 @@ CV Generator includes:
 The public core of the project is `engine + MCP`.
 The UI and CLI remain part of the repository for local use, but the main public agent-facing surface is `MCP`.
 
+<table align="center">
+  <tr>
+    <td align="center">
+      <a href="./cv.jpg">
+        <img src="./cv.jpg" alt="CV Generator preview 1" height="220" />
+      </a>
+    </td>
+    <td width="20"></td>
+    <td align="center">
+      <a href="./cv2.png">
+        <img src="./cv2.png" alt="CV Generator preview 2" height="220" />
+      </a>
+    </td>
+    <td width="20"></td>
+    <td align="center">
+      <a href="./cv3.png">
+        <img src="./cv3.png" alt="CV Generator preview 3" height="220" />
+      </a>
+    </td>
+  </tr>
+</table>
+
 ## What the project does
 
 - generates an HTML CV from a `CvData` JSON payload
