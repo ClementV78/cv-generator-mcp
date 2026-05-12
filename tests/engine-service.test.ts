@@ -23,6 +23,8 @@ test("getCvSchema exposes the expected render contract", () => {
   assert(schema.properties.render.properties.theme.enum.includes("ocean"));
   assert.equal(schema.properties.render.properties.theme.enum.includes("zen-sunset"), false);
   assert.deepEqual(schema.properties.render.properties.language.enum, ["english", "french", "spanish"]);
+  assert.deepEqual(schema.properties.render.properties.templateStyle.enum, ["classic", "compact"]);
+  assert.equal(schema.properties.render.properties.showSkillLevels.type, "boolean");
 });
 
 test("validateCvInput normalizes the fixture and returns structure messages", async () => {
@@ -33,6 +35,8 @@ test("validateCvInput normalizes the fixture and returns structure messages", as
   assert.equal(Array.isArray(result.structureMessages), true);
   assert.equal(Array.isArray(result.issues), true);
   assert.equal(result.pageLimitExceeded, false);
+  assert.equal(result.cvData.render.templateStyle, "classic");
+  assert.equal(result.cvData.render.showSkillLevels, true);
 });
 
 test("generateCvArtifact renders HTML without editor chrome", async () => {

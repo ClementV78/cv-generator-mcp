@@ -13,6 +13,7 @@ import type {
   SkillGroup,
   SkillTagGroup,
   TagItem,
+  TemplateStyle,
   TextItem,
   ValidationResult,
 } from "./types";
@@ -126,11 +127,12 @@ const renderSkillBarRow = (
   path: string,
   index: number,
   interactive: boolean,
+  showSkillLevels: boolean,
 ): string => `
   <div class="skill-row">
     <div class="skill-row-main">
       ${renderEditableText(item.label, `${path}.${index}.label`, interactive)}
-      <span class="skill-level-value">${item.level}%</span>
+      ${showSkillLevels ? `<span class="skill-level-value">${item.level}%</span>` : ""}
     </div>
     <div class="skill-track"><span style="width:${item.level}%"></span></div>
     <div class="skill-row-actions ${controlClass(interactive)}">
@@ -147,6 +149,167 @@ const renderSkillBarRow = (
     </div>
   </div>
 `;
+
+const splitRadarLabel = (label: string): string[] => {
+  const compact = label.trim().replace(/\s+/g, " ");
+  const words = compact.split(" ").filter(Boolean);
+
+  if (words.length > 1 && compact.length > 10) {
+    const middle = Math.ceil(words.length / 2);
+    return [words.slice(0, middle).join(" "), words.slice(middle).join(" ")];
+  }
+
+  if (compact.length <= 14) {
+    return [compact];
+  }
+
+  const separators = [" / ", " | ", " (", " - ", " "];
+  for (const separator of separators) {
+    const index = compact.indexOf(separator);
+    if (index > 3 && index < compact.length - 3) {
+      const left = compact.slice(0, index).trim();
+      const right = compact.slice(index + separator.length).trim();
+      if (left && right) {
+        return [left, right];
+      }
+    }
+  }
+
+  const middle = Math.floor(compact.length / 2);
+  const before = compact.lastIndexOf(" ", middle);
+  const after = compact.indexOf(" ", middle);
+  const splitIndex = before > 4 ? before : after;
+
+  if (splitIndex > 4 && splitIndex < compact.length - 4) {
+    return [compact.slice(0, splitIndex).trim(), compact.slice(splitIndex + 1).trim()];
+  }
+
+  return [compact];
+};
+
+const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
+
+const renderSkillRadar = (
+  group: SkillBarGroup,
+  path: string,
+  interactive: boolean,
+  showSkillLevels: boolean,
+): string => {
+  const size = 300;
+  const center = size / 2;
+  const radius = 78;
+  const levels = [0.25, 0.5, 0.75, 1];
+  const itemCount = Math.max(group.items.length, 3);
+  const angleStep = (Math.PI * 2) / itemCount;
+  const points = group.items.map((item, index) => {
+    const angle = -Math.PI / 2 + angleStep * index;
+    const ratio = Math.max(0, Math.min(100, item.level)) / 100;
+    const axisX = center + Math.cos(angle) * radius;
+    const axisY = center + Math.sin(angle) * radius;
+    const plotX = center + Math.cos(angle) * radius * ratio;
+    const plotY = center + Math.sin(angle) * radius * ratio;
+    const labelLines = splitRadarLabel(item.label);
+    const rawLabelX = center + Math.cos(angle) * (radius + 24);
+    const rawLabelY = center + Math.sin(angle) * (radius + 24);
+    const labelAnchor =
+      Math.abs(rawLabelX - center) < 10 ? "middle" : rawLabelX > center ? "start" : "end";
+    const labelX =
+      labelAnchor === "start"
+        ? clamp(rawLabelX, 18, size - 64)
+        : labelAnchor === "end"
+          ? clamp(rawLabelX, 64, size - 18)
+          : clamp(rawLabelX, 28, size - 28);
+    const labelY = clamp(rawLabelY, 18, size - 18);
+
+    return {
+      item,
+      axisX,
+      axisY,
+      plotX,
+      plotY,
+      labelX,
+      labelY,
+      labelLines,
+      labelAnchor,
+    };
+  });
+
+  const polygonPoints = points.map((point) => `${point.plotX.toFixed(1)},${point.plotY.toFixed(1)}`).join(" ");
+
+  return `
+    <div class="skill-radar-card">
+      <div class="skill-radar-visual" aria-hidden="true">
+        <svg viewBox="0 0 ${size} ${size}" role="presentation">
+          ${levels
+            .map((level) => {
+              const ringPoints = points
+                .map((point) => {
+                  const ringX = center + (point.axisX - center) * level;
+                  const ringY = center + (point.axisY - center) * level;
+                  return `${ringX.toFixed(1)},${ringY.toFixed(1)}`;
+                })
+                .join(" ");
+              return `<polygon class="skill-radar-ring" points="${ringPoints}"></polygon>`;
+            })
+            .join("")}
+          ${points
+            .map(
+              (point) =>
+                `<line class="skill-radar-axis" x1="${center}" y1="${center}" x2="${point.axisX.toFixed(1)}" y2="${point.axisY.toFixed(1)}"></line>`,
+            )
+            .join("")}
+          <polygon class="skill-radar-area" points="${polygonPoints}"></polygon>
+          ${points
+            .map(
+              (point) =>
+                `<circle class="skill-radar-node" cx="${point.plotX.toFixed(1)}" cy="${point.plotY.toFixed(1)}" r="3.8"></circle>`,
+            )
+            .join("")}
+          ${points
+            .map(
+              (point) =>
+                `<text class="skill-radar-label" x="${point.labelX.toFixed(1)}" y="${point.labelY.toFixed(1)}" text-anchor="${point.labelAnchor}">${point.labelLines
+                  .map((line, lineIndex) => `<tspan x="${point.labelX.toFixed(1)}" dy="${lineIndex === 0 ? "0" : "1.08em"}">${escapeHtml(line)}</tspan>`)
+                  .join("")}</text>`,
+            )
+            .join("")}
+        </svg>
+      </div>
+      ${
+        showSkillLevels || interactive
+          ? `
+              <div class="skill-radar-legend ${showSkillLevels ? "" : "edit-only"}">
+                ${group.items
+                  .map(
+                    (item, itemIndex) => `
+                      <div class="skill-radar-legend-row">
+                        <div class="skill-radar-legend-main">
+                          ${renderEditableText(item.label, `${path}.${itemIndex}.label`, interactive)}
+                          ${showSkillLevels ? `<span class="skill-level-value">${item.level}%</span>` : ""}
+                        </div>
+                        <div class="skill-radar-legend-actions ${controlClass(interactive)}">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value="${item.level}"
+                            data-action="set-range"
+                            data-bind="${path}.${itemIndex}.level"
+                          />
+                          ${renderToolbarButtons(path, itemIndex, interactive)}
+                        </div>
+                      </div>
+                    `,
+                  )
+                  .join("")}
+              </div>
+            `
+          : ""
+      }
+    </div>
+  `;
+};
 
 const renderTagRow = (item: TagItem, path: string, index: number, interactive: boolean): string => `
   <div class="tag-pill">
@@ -169,13 +332,17 @@ const renderSkillGroup = (
   index: number,
   state: CvData,
   interactive: boolean,
+  templateStyle: TemplateStyle,
+  showSkillLevels: boolean,
 ): string => {
   const groupPath = `skillGroups.${index}`;
   const itemPath = `${groupPath}.items`;
   const itemsMarkup =
-    group.type === "bars"
+    group.type === "bars" && templateStyle === "compact" && (group as SkillBarGroup).items.length >= 3
+      ? renderSkillRadar(group as SkillBarGroup, itemPath, interactive, showSkillLevels)
+      : group.type === "bars"
       ? (group as SkillBarGroup).items
-          .map((item, itemIndex) => renderSkillBarRow(item, itemPath, itemIndex, interactive))
+          .map((item, itemIndex) => renderSkillBarRow(item, itemPath, itemIndex, interactive, showSkillLevels))
           .join("")
       : `<div class="tag-cloud">${(group as SkillTagGroup).items
           .map((item, itemIndex) => renderTagRow(item, itemPath, itemIndex, interactive))
@@ -339,7 +506,16 @@ const renderExperience = (
           ${renderEditableText(experience.period, `${experiencePath}.period`, interactive, 1, copy.labelPeriod, "experience-period")}
           ${renderToolbarButtons("experiences", index, interactive)}
         </div>
-        ${renderEditableText(experience.subtitle, `${experiencePath}.subtitle`, interactive, 2, copy.labelExperienceSubtitle, "experience-subtitle")}
+        ${experience.subtitle.trim().length > 0
+          ? renderEditableText(
+              experience.subtitle,
+              `${experiencePath}.subtitle`,
+              interactive,
+              2,
+              copy.labelExperienceSubtitle,
+              "experience-subtitle",
+            )
+          : ""}
         <ul class="bullet-list">
           ${experience.bullets
             .map((bullet, bulletIndex) => renderBullet(bullet, bulletsPath, bulletIndex, interactive, copy.labelBulletPoint))
@@ -419,6 +595,7 @@ export const renderApp = (state: CvData, options: RenderOptions): string => {
   } = options;
   const modeClass = state.render.mode === "preview" ? "mode-preview" : "mode-edit";
   const themeClass = `theme-${state.render.theme}`;
+  const templateStyleClass = `template-${state.render.templateStyle}`;
   const sidebarClass = state.render.sidebarPosition === "right" ? "sidebar-right" : "sidebar-left";
   const sidebarToggleArrow = state.render.sidebarPosition === "right" ? "&larr;" : "&rarr;";
   const sidebarToggleTitle =
@@ -428,7 +605,7 @@ export const renderApp = (state: CvData, options: RenderOptions): string => {
   const canAddSkillGroups = canAddFactory(state, "skillGroups", "skill-bar-group");
 
   return `
-    <div class="editor-shell ${modeClass} ${themeClass}">
+    <div class="editor-shell ${modeClass} ${themeClass} ${templateStyleClass}">
       <header class="app-toolbar">
         <div class="toolbar-brand">
           <div class="toolbar-kicker">Template editor</div>
@@ -482,6 +659,20 @@ export const renderApp = (state: CvData, options: RenderOptions): string => {
             </select>
           </label>
           <label class="toolbar-field">
+            <span>Style</span>
+            <select data-action="set-template-style">
+              <option value="classic" ${state.render.templateStyle === "classic" ? "selected" : ""}>Classique</option>
+              <option value="compact" ${state.render.templateStyle === "compact" ? "selected" : ""}>Compact</option>
+            </select>
+          </label>
+          <label class="toolbar-field toolbar-field-switch">
+            <span>% exacts</span>
+            <span class="toolbar-switch">
+              <input type="checkbox" data-action="toggle-skill-levels" ${state.render.showSkillLevels ? "checked" : ""} />
+              <span class="toolbar-switch-slider" aria-hidden="true"></span>
+            </span>
+          </label>
+          <label class="toolbar-field">
             <span>Format export</span>
             <select data-action="set-export-format">
               <option value="html" ${selectedExportFormat === "html" ? "selected" : ""}>Export HTML</option>
@@ -513,6 +704,7 @@ interface RenderCvSheetOptions {
 export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): string => {
   const { interactive, activeCardIconMenu = null, qrCodeMarkup = null } = options;
   const themeClass = `theme-${state.render.theme}`;
+  const templateStyleClass = `template-${state.render.templateStyle}`;
   const sidebarClass = state.render.sidebarPosition === "right" ? "sidebar-right" : "sidebar-left";
   const copy = getCvLanguageCopy(state.render.language);
   const sidebarToggleArrow = state.render.sidebarPosition === "right" ? "&larr;" : "&rarr;";
@@ -523,7 +715,7 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
   const canAddSkillGroups = canAddFactory(state, "skillGroups", "skill-bar-group");
 
   return `
-      <div class="cv-sheet ${themeClass} ${sidebarClass}">
+      <div class="cv-sheet ${themeClass} ${templateStyleClass} ${sidebarClass}">
           <aside class="sidebar">
             <div class="sidebar-top-actions ${controlClass(interactive)}">
               <button
@@ -572,20 +764,46 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
           }
 
           <section class="sidebar-section">
-            ${renderSectionHeader(
-              copy.sectionSkills,
-              interactive,
-              undefined,
-              undefined,
-              false,
-              canAddSkillGroups
+            ${
+              state.render.templateStyle === "compact"
                 ? `
-                    <button type="button" data-action="add-item" data-path="skillGroups" data-factory="skill-bar-group">+ Compétences</button>
-                    <button type="button" data-action="add-item" data-path="skillGroups" data-factory="skill-tag-group">+ Tags</button>
+                    <div class="section-actions ${controlClass(interactive)} compact-skill-actions">
+                      ${
+                        canAddSkillGroups
+                          ? `
+                              <button type="button" data-action="add-item" data-path="skillGroups" data-factory="skill-bar-group">+ Compétences</button>
+                              <button type="button" data-action="add-item" data-path="skillGroups" data-factory="skill-tag-group">+ Tags</button>
+                            `
+                          : `<span class="group-limit-hint ${controlClass(interactive)}">3 blocs max</span>`
+                      }
+                    </div>
                   `
-                : `<span class="group-limit-hint ${controlClass(interactive)}">3 blocs max</span>`,
-            )}
-            ${state.skillGroups.map((group, index) => renderSkillGroup(group, index, state, interactive)).join("")}
+                : renderSectionHeader(
+                    copy.sectionSkills,
+                    interactive,
+                    undefined,
+                    undefined,
+                    false,
+                    canAddSkillGroups
+                      ? `
+                          <button type="button" data-action="add-item" data-path="skillGroups" data-factory="skill-bar-group">+ Compétences</button>
+                          <button type="button" data-action="add-item" data-path="skillGroups" data-factory="skill-tag-group">+ Tags</button>
+                        `
+                      : `<span class="group-limit-hint ${controlClass(interactive)}">3 blocs max</span>`,
+                  )
+            }
+            ${state.skillGroups
+              .map((group, index) =>
+                renderSkillGroup(
+                  group,
+                  index,
+                  state,
+                  interactive,
+                  state.render.templateStyle,
+                  state.render.showSkillLevels,
+                ),
+              )
+              .join("")}
           </section>
 
           <section class="sidebar-section">

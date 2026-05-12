@@ -16,6 +16,7 @@ import type {
   SkillGroup,
   SkillTagGroup,
   TagItem,
+  TemplateStyle,
   TextItem,
 } from "./types";
 
@@ -55,6 +56,9 @@ const asSidebarPosition = (value: unknown, fallback: SidebarPosition = "left"): 
 
 const asCvLanguage = (value: unknown, fallback: CvLanguage = "english"): CvLanguage =>
   normalizeCvLanguage(value, fallback);
+
+const asTemplateStyle = (value: unknown, fallback: TemplateStyle = "classic"): TemplateStyle =>
+  value === "compact" ? "compact" : fallback;
 
 const getDefaultBadgeText = (fullName: string): string => {
   const parts = fullName
@@ -527,6 +531,8 @@ export const normalizeCvData = (input: unknown): CvData => {
       theme: asTheme(render.theme),
       sidebarPosition: asSidebarPosition(render.sidebarPosition),
       language,
+      templateStyle: asTemplateStyle(render.templateStyle),
+      showSkillLevels: asBoolean(render.showSkillLevels, true),
     },
   };
 };

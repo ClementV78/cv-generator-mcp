@@ -467,6 +467,21 @@ app.addEventListener("change", (event) => {
     return;
   }
 
+  if (action === "set-template-style" && target instanceof HTMLSelectElement) {
+    const value = target.value === "compact" ? "compact" : "classic";
+    store.update((draft) => {
+      draft.render.templateStyle = value;
+    });
+    return;
+  }
+
+  if (action === "toggle-skill-levels" && target instanceof HTMLInputElement) {
+    store.update((draft) => {
+      draft.render.showSkillLevels = target.checked;
+    });
+    return;
+  }
+
   if (action === "set-export-format" && target instanceof HTMLSelectElement) {
     const value = target.value;
     selectedExportFormat = value === "json" ? "json" : "html";

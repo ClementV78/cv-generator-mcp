@@ -14,6 +14,7 @@ export const CV_THEME_VALUES = [
 export const SIDEBAR_POSITION_VALUES = ["left", "right"] as const;
 export const CARD_ICON_VALUES = ["certification", "formation", "generic"] as const;
 export const SKILL_GROUP_TYPE_VALUES = ["bars", "tags"] as const;
+export const TEMPLATE_STYLE_VALUES = ["classic", "compact"] as const;
 
 const cvDataMinimalExample = {
   header: {
@@ -96,6 +97,8 @@ const cvDataMinimalExample = {
     theme: "ocean",
     sidebarPosition: "left",
     language: "french",
+    templateStyle: "classic",
+    showSkillLevels: true,
   },
 } as const;
 
@@ -337,6 +340,17 @@ export const cvDataJsonSchema = {
           enum: [...CV_LANGUAGE_VALUES],
           description:
             "Langue visible du CV final. Les cles du schema CvData restent en anglais, seul le contenu et les libelles rendus changent.",
+        },
+        templateStyle: {
+          type: "string",
+          enum: [...TEMPLATE_STYLE_VALUES],
+          description:
+            "Variante visuelle du template. classic conserve le rendu actuel, compact densifie la mise en page et affiche les competences a barres dans un radar.",
+        },
+        showSkillLevels: {
+          type: "boolean",
+          description:
+            "Affiche ou masque les pourcentages exacts associes aux competences a barres et au radar.",
         },
       },
     },
