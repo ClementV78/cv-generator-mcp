@@ -60,9 +60,16 @@ The web editor supports:
 - editing content
 - choosing the CV language (`english | french | spanish`)
 - choosing the theme
+- choosing the template style (`classic | compact`)
+- toggling exact skill percentages (`showSkillLevels`)
 - configuring the sidebar
 - importing / exporting JSON
 - previewing the rendered output
+
+Template style behavior:
+
+- `classic`: current default layout with standard skill bars
+- `compact`: denser layout, reduced spacing, and radar rendering for bar-based skill groups when relevant
 
 ### 2. LLM / agent usage
 
@@ -279,6 +286,8 @@ Public examples are provided in `examples/`:
 - `examples/cv-java.json`
 - `examples/cv-sophro.json`
 
+The `examples/` folder may also contain additional working or targeted CV variants used to iterate on real scenarios.
+
 ## Input contract
 
 The main input contract remains `CvData`.
@@ -286,7 +295,7 @@ The main input contract remains `CvData`.
 The main rules to remember are:
 
 - business and render settings live inside `cv_data`
-- `theme`, `sidebarPosition`, `maxPages`, and `language` live inside `cv_data.render`
+- `theme`, `sidebarPosition`, `maxPages`, `language`, `templateStyle`, and `showSkillLevels` live inside `cv_data.render`
 - schema keys remain in English regardless of the visible CV language
 - `pdf_mode` and `browser_executable_path` (optional) are MCP execution parameters, not business fields of the CV
 
@@ -299,7 +308,9 @@ Example:
       "theme": "ocean",
       "sidebarPosition": "left",
       "maxPages": 2,
-      "language": "english"
+      "language": "english",
+      "templateStyle": "classic",
+      "showSkillLevels": true
     }
   },
   "pdf_mode": "paginated"

@@ -72,6 +72,7 @@ CV_Generator/
     cv-java.json
     cv-minimal.json
     cv-sophro.json
+    ...
   skills/
     cv-generator/
       SKILL.md
@@ -137,6 +138,8 @@ It supports:
 - inline content editing
 - CV language selection (`english | french | spanish`)
 - theme selection
+- template style selection (`classic | compact`)
+- exact skill level toggle (`showSkillLevels`)
 - sidebar position selection
 - JSON and HTML import / export
 - preview rendering
@@ -209,7 +212,7 @@ Responsibilities:
 
 - visual structure of the template
 - themes
-- print presentation
+- print presentation, including compact-specific PDF / print tuning
 - editor / preview presentation
 
 ---
@@ -272,6 +275,8 @@ classDiagram
       +CvTheme theme
       +SidebarPosition sidebarPosition
       +CvLanguage language
+      +TemplateStyle templateStyle
+      +boolean showSkillLevels
     }
 
     class Experience {
