@@ -128,185 +128,35 @@ const renderSkillBarRow = (
   index: number,
   interactive: boolean,
   showSkillLevels: boolean,
-): string => `
-  <div class="skill-row">
-    <div class="skill-row-main">
-      ${renderEditableText(item.label, `${path}.${index}.label`, interactive)}
-      ${showSkillLevels ? `<span class="skill-level-value">${item.level}%</span>` : ""}
-    </div>
-    <div class="skill-track"><span style="width:${item.level}%"></span></div>
-    <div class="skill-row-actions ${controlClass(interactive)}">
-      <input
-        type="range"
-        min="0"
-        max="100"
-        step="1"
-        value="${item.level}"
-        data-action="set-range"
-        data-bind="${path}.${index}.level"
-      />
-      ${renderToolbarButtons(path, index, interactive)}
-    </div>
-  </div>
-`;
-
-const splitRadarLabel = (label: string): string[] => {
-  const compact = label.trim().replace(/\s+/g, " ");
-  const words = compact.split(" ").filter(Boolean);
-
-  if (words.length > 1 && compact.length > 10) {
-    const middle = Math.ceil(words.length / 2);
-    return [words.slice(0, middle).join(" "), words.slice(middle).join(" ")];
-  }
-
-  if (compact.length <= 14) {
-    return [compact];
-  }
-
-  const separators = [" / ", " | ", " (", " - ", " "];
-  for (const separator of separators) {
-    const index = compact.indexOf(separator);
-    if (index > 3 && index < compact.length - 3) {
-      const left = compact.slice(0, index).trim();
-      const right = compact.slice(index + separator.length).trim();
-      if (left && right) {
-        return [left, right];
-      }
-    }
-  }
-
-  const middle = Math.floor(compact.length / 2);
-  const before = compact.lastIndexOf(" ", middle);
-  const after = compact.indexOf(" ", middle);
-  const splitIndex = before > 4 ? before : after;
-
-  if (splitIndex > 4 && splitIndex < compact.length - 4) {
-    return [compact.slice(0, splitIndex).trim(), compact.slice(splitIndex + 1).trim()];
-  }
-
-  return [compact];
-};
-
-const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
-
-const renderSkillRadar = (
-  group: SkillBarGroup,
-  path: string,
-  interactive: boolean,
-  showSkillLevels: boolean,
 ): string => {
-  const size = 300;
-  const center = size / 2;
-  const radius = 78;
-  const levels = [0.25, 0.5, 0.75, 1];
-  const itemCount = Math.max(group.items.length, 3);
-  const angleStep = (Math.PI * 2) / itemCount;
-  const points = group.items.map((item, index) => {
-    const angle = -Math.PI / 2 + angleStep * index;
-    const ratio = Math.max(0, Math.min(100, item.level)) / 100;
-    const axisX = center + Math.cos(angle) * radius;
-    const axisY = center + Math.sin(angle) * radius;
-    const plotX = center + Math.cos(angle) * radius * ratio;
-    const plotY = center + Math.sin(angle) * radius * ratio;
-    const labelLines = splitRadarLabel(item.label);
-    const rawLabelX = center + Math.cos(angle) * (radius + 24);
-    const rawLabelY = center + Math.sin(angle) * (radius + 24);
-    const labelAnchor =
-      Math.abs(rawLabelX - center) < 10 ? "middle" : rawLabelX > center ? "start" : "end";
-    const labelX =
-      labelAnchor === "start"
-        ? clamp(rawLabelX, 18, size - 64)
-        : labelAnchor === "end"
-          ? clamp(rawLabelX, 64, size - 18)
-          : clamp(rawLabelX, 28, size - 28);
-    const labelY = clamp(rawLabelY, 18, size - 18);
-
-    return {
-      item,
-      axisX,
-      axisY,
-      plotX,
-      plotY,
-      labelX,
-      labelY,
-      labelLines,
-      labelAnchor,
-    };
-  });
-
-  const polygonPoints = points.map((point) => `${point.plotX.toFixed(1)},${point.plotY.toFixed(1)}`).join(" ");
+  const segmentCount = 6;
+  const filledSegments = Math.max(0, Math.min(segmentCount, Math.ceil((item.level / 100) * segmentCount)));
 
   return `
-    <div class="skill-radar-card">
-      <div class="skill-radar-visual" aria-hidden="true">
-        <svg viewBox="0 0 ${size} ${size}" role="presentation">
-          ${levels
-            .map((level) => {
-              const ringPoints = points
-                .map((point) => {
-                  const ringX = center + (point.axisX - center) * level;
-                  const ringY = center + (point.axisY - center) * level;
-                  return `${ringX.toFixed(1)},${ringY.toFixed(1)}`;
-                })
-                .join(" ");
-              return `<polygon class="skill-radar-ring" points="${ringPoints}"></polygon>`;
-            })
-            .join("")}
-          ${points
-            .map(
-              (point) =>
-                `<line class="skill-radar-axis" x1="${center}" y1="${center}" x2="${point.axisX.toFixed(1)}" y2="${point.axisY.toFixed(1)}"></line>`,
-            )
-            .join("")}
-          <polygon class="skill-radar-area" points="${polygonPoints}"></polygon>
-          ${points
-            .map(
-              (point) =>
-                `<circle class="skill-radar-node" cx="${point.plotX.toFixed(1)}" cy="${point.plotY.toFixed(1)}" r="3.8"></circle>`,
-            )
-            .join("")}
-          ${points
-            .map(
-              (point) =>
-                `<text class="skill-radar-label" x="${point.labelX.toFixed(1)}" y="${point.labelY.toFixed(1)}" text-anchor="${point.labelAnchor}">${point.labelLines
-                  .map((line, lineIndex) => `<tspan x="${point.labelX.toFixed(1)}" dy="${lineIndex === 0 ? "0" : "1.08em"}">${escapeHtml(line)}</tspan>`)
-                  .join("")}</text>`,
-            )
-            .join("")}
-        </svg>
+    <div class="skill-row">
+      <div class="skill-row-main">
+        ${renderEditableText(item.label, `${path}.${index}.label`, interactive)}
+        ${showSkillLevels ? `<span class="skill-level-value">${item.level}%</span>` : ""}
       </div>
-      ${
-        showSkillLevels || interactive
-          ? `
-              <div class="skill-radar-legend ${showSkillLevels ? "" : "edit-only"}">
-                ${group.items
-                  .map(
-                    (item, itemIndex) => `
-                      <div class="skill-radar-legend-row">
-                        <div class="skill-radar-legend-main">
-                          ${renderEditableText(item.label, `${path}.${itemIndex}.label`, interactive)}
-                          ${showSkillLevels ? `<span class="skill-level-value">${item.level}%</span>` : ""}
-                        </div>
-                        <div class="skill-radar-legend-actions ${controlClass(interactive)}">
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="1"
-                            value="${item.level}"
-                            data-action="set-range"
-                            data-bind="${path}.${itemIndex}.level"
-                          />
-                          ${renderToolbarButtons(path, itemIndex, interactive)}
-                        </div>
-                      </div>
-                    `,
-                  )
-                  .join("")}
-              </div>
-            `
-          : ""
-      }
+      <div class="skill-track" aria-hidden="true">
+        ${Array.from(
+          { length: segmentCount },
+          (_, segmentIndex) => `<span class="${segmentIndex < filledSegments ? "is-filled" : ""}"></span>`,
+        ).join("")}
+      </div>
+      <div class="skill-row-actions ${controlClass(interactive)}">
+        <span class="skill-edit-level">${filledSegments}/${segmentCount} · ${item.level}%</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value="${item.level}"
+          data-action="set-range"
+          data-bind="${path}.${index}.level"
+        />
+        ${renderToolbarButtons(path, index, interactive)}
+      </div>
     </div>
   `;
 };
@@ -338,9 +188,7 @@ const renderSkillGroup = (
   const groupPath = `skillGroups.${index}`;
   const itemPath = `${groupPath}.items`;
   const itemsMarkup =
-    group.type === "bars" && templateStyle === "compact" && (group as SkillBarGroup).items.length >= 3
-      ? renderSkillRadar(group as SkillBarGroup, itemPath, interactive, showSkillLevels)
-      : group.type === "bars"
+    group.type === "bars"
       ? (group as SkillBarGroup).items
           .map((item, itemIndex) => renderSkillBarRow(item, itemPath, itemIndex, interactive, showSkillLevels))
           .join("")
@@ -516,6 +364,17 @@ const renderExperience = (
               "experience-subtitle",
             )
           : ""}
+        ${interactive || experience.summary.trim().length > 0
+          ? renderEditableText(
+              experience.summary,
+              `${experiencePath}.summary`,
+              interactive,
+              4,
+              "Résumé d'expérience",
+              "experience-summary",
+              true,
+            )
+          : ""}
         <ul class="bullet-list">
           ${experience.bullets
             .map((bullet, bulletIndex) => renderBullet(bullet, bulletsPath, bulletIndex, interactive, copy.labelBulletPoint))
@@ -683,6 +542,7 @@ export const renderApp = (state: CvData, options: RenderOptions): string => {
           <button type="button" data-action="export-pdf">Imprimer (PDF)</button>
           <button type="button" data-action="trigger-import">Importer JSON</button>
           <input type="file" id="json-import-input" accept="application/json" class="is-hidden" />
+          <input type="file" id="photo-import-input" accept="image/png,image/jpeg,image/webp" class="is-hidden" />
         </div>
         <div class="toolbar-status">
           <span class="status-chip">Pages estimées : ${validation?.pageCount ?? 1}</span>
@@ -726,15 +586,50 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
                 title="${sidebarToggleTitle}"
               >${sidebarToggleArrow}</button>
             </div>
-            <div class="cv-badge">
-              ${renderEditableText(state.header.badgeText, "header.badgeText", interactive, 2, copy.labelBadgeText, "badge-text")}
-            </div>
+            ${
+              state.header.showPhoto && state.header.photoUrl.trim()
+                ? `
+                  <div class="cv-photo">
+                    <img
+                      src="${escapeHtml(state.header.photoUrl).replace(/"/g, "&quot;")}"
+                      alt="${escapeHtml(state.header.name)}"
+                      style="width: ${state.header.photoZoom}%; height: ${state.header.photoZoom}%;"
+                    />
+                  </div>
+                  <label class="photo-zoom ${controlClass(interactive)}">
+                    <span>Zoom</span>
+                    <input
+                      type="range"
+                      min="80"
+                      max="180"
+                      step="5"
+                      value="${state.header.photoZoom}"
+                      data-action="set-range"
+                      data-bind="header.photoZoom"
+                    />
+                  </label>
+                  <div class="photo-actions ${controlClass(interactive)}">
+                    <button type="button" data-action="trigger-photo-import">Changer la photo</button>
+                    <button type="button" data-action="remove-photo">Retirer</button>
+                  </div>
+                `
+                : `
+                  <div class="cv-badge">
+                    ${renderEditableText(state.header.badgeText, "header.badgeText", interactive, 2, copy.labelBadgeText, "badge-text")}
+                  </div>
+                  <div class="photo-actions ${controlClass(interactive)}">
+                    <button type="button" data-action="trigger-photo-import">Ajouter une photo</button>
+                  </div>
+                `
+            }
 
           <section class="contact-list">
-            ${renderEditableText(state.header.location, "header.location", interactive, 2, copy.labelLocation, "contact-item")}
-            ${renderEditableText(state.header.email, "header.email", interactive, 2, "Email", "contact-item")}
-            ${renderEditableText(state.header.linkedin, "header.linkedin", interactive, 2, "LinkedIn", "contact-item")}
-            ${renderEditableText(state.header.availabilityText, "header.availabilityText", interactive, 3, copy.labelAvailability, "contact-item")}
+            ${interactive || state.header.location.trim() ? renderEditableText(state.header.location, "header.location", interactive, 2, copy.labelLocation, "contact-item") : ""}
+            ${interactive || state.header.email.trim() ? renderEditableText(state.header.email, "header.email", interactive, 2, "Email", "contact-item") : ""}
+            ${interactive || state.header.phone.trim() ? renderEditableText(state.header.phone, "header.phone", interactive, 2, "Telephone", "contact-item") : ""}
+            ${interactive || state.header.linkedin.trim() ? renderEditableText(state.header.linkedin, "header.linkedin", interactive, 2, "LinkedIn", "contact-item") : ""}
+            ${interactive || state.header.github.trim() ? renderEditableText(state.header.github, "header.github", interactive, 2, "GitHub", "contact-item") : ""}
+            ${interactive || state.header.availabilityText.trim() ? renderEditableText(state.header.availabilityText, "header.availabilityText", interactive, 3, copy.labelAvailability, "contact-item") : ""}
           </section>
 
           ${

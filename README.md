@@ -329,10 +329,15 @@ The MCP client sends:
     "header": {
       "name": "Alex Martin",
       "badgeText": "A.M",
+      "photoUrl": "",
+      "showPhoto": false,
+      "photoZoom": 100,
       "headline": "DEVOPS | CLOUD | AUTOMATION",
       "location": "Paris, France",
       "email": "alex.martin@example.com",
+      "phone": "+33 6 12 34 56 78",
       "linkedin": "linkedin.com/in/alex-martin",
+      "github": "github.com/alex-martin",
       "availabilityText": "Available for DevOps and Cloud engagements",
       "qrCodeLabel": "Web version",
       "qrCodeUrl": "https://example.com/cv/alex-martin",
@@ -356,7 +361,9 @@ The MCP client sends:
       "maxPages": 2,
       "theme": "ocean",
       "sidebarPosition": "left",
-      "language": "english"
+      "language": "english",
+      "templateStyle": "classic",
+      "showSkillLevels": true
     }
   }
 }

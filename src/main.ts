@@ -109,6 +109,37 @@ const downloadFile = (name: string, content: BlobPart, type: string): void => {
   URL.revokeObjectURL(url);
 };
 
+const readOptimizedPhoto = async (file: File): Promise<string> => {
+  const sourceUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.addEventListener("load", () => resolve(img));
+      img.addEventListener("error", () => reject(new Error("Image load failed")));
+      img.src = sourceUrl;
+    });
+
+    const maxSide = 720;
+    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Canvas context unavailable");
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+};
+
 const printHtmlDocument = (html: string): void => {
   const iframe = document.createElement("iframe");
   iframe.style.position = "fixed";
@@ -249,6 +280,19 @@ app.addEventListener("click", async (event) => {
     return;
   }
 
+  if (action === "trigger-photo-import") {
+    app.querySelector<HTMLInputElement>("#photo-import-input")?.click();
+    return;
+  }
+
+  if (action === "remove-photo") {
+    store.update((draft) => {
+      draft.header.photoUrl = "";
+      draft.header.showPhoto = false;
+    });
+    return;
+  }
+
   if (action === "export-document") {
     if (currentValidation?.pageLimitExceeded) {
       window.alert(
@@ -303,6 +347,7 @@ app.addEventListener("click", async (event) => {
         role: copy.defaults.newExperienceRole,
         period: "2025",
         subtitle: copy.defaults.newExperienceSubtitle,
+        summary: "",
         bullets: [createTextItem(copy.defaults.newExperienceBullet)],
         techEnvironmentLabel: getPreferredEnvironmentLabel(state),
         techEnvironment: copy.defaults.technologiesToSpecify,
@@ -546,6 +591,36 @@ app.addEventListener("change", async (event) => {
     store.replace(imported);
   } catch {
     window.alert("Le fichier JSON n'a pas pu être importé.");
+  } finally {
+    target.value = "";
+  }
+});
+
+app.addEventListener("change", async (event) => {
+  const target = event.target as HTMLInputElement;
+
+  if (target.id !== "photo-import-input" || !target.files?.[0]) {
+    return;
+  }
+
+  const file = target.files[0];
+
+  if (!file.type.startsWith("image/")) {
+    window.alert("Le fichier sélectionné n'est pas une image.");
+    target.value = "";
+    return;
+  }
+
+  try {
+    const photoUrl = await readOptimizedPhoto(file);
+
+    store.update((draft) => {
+      draft.header.photoUrl = photoUrl;
+      draft.header.showPhoto = true;
+      draft.header.photoZoom = 100;
+    });
+  } catch {
+    window.alert("La photo n'a pas pu être chargée.");
   } finally {
     target.value = "";
   }

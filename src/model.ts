@@ -149,6 +149,7 @@ export const createExperience = (): Experience => ({
   role: "New role",
   period: "2025",
   subtitle: "Project / scope",
+  summary: "",
   bullets: [createTextItem("Describe the mission and the main contribution.")],
   techEnvironmentLabel: "Technical environment",
   techEnvironment: "Technologies to specify",
@@ -458,6 +459,7 @@ const normalizeExperience = (input: unknown): Experience => {
     role: asString(item.role, copy.defaults.newExperienceRole),
     period: asString(item.period, "2025"),
     subtitle: asString(item.subtitle, copy.defaults.newExperienceSubtitle),
+    summary: asString(item.summary, ""),
     bullets: asArray<unknown>(item.bullets).map((entry) =>
       normalizeTextItem(entry, copy.defaults.newExperienceBullet),
     ),
@@ -485,13 +487,18 @@ export const normalizeCvData = (input: unknown): CvData => {
     header: {
       name,
       badgeText: asString(header.badgeText, getDefaultBadgeText(name)),
+      photoUrl: asString(header.photoUrl, ""),
+      showPhoto: asBoolean(header.showPhoto, false),
+      photoZoom: Math.min(180, Math.max(80, asNumber(header.photoZoom, 100))),
       headline: asString(
         header.headline,
         "CLOUD & PLATFORM ENGINEER | SOLUTION ARCHITECT | DEVOPS",
       ),
       location: asString(header.location, "France"),
       email: asString(header.email, "alex.martin@example.com"),
+      phone: asString(header.phone, "+33 6 12 34 56 78"),
       linkedin: asString(header.linkedin, "linkedin.com/in/alex-martin"),
+      github: asString(header.github, "github.com/alex-martin"),
       availabilityText: asString(
         header.availabilityText,
         copy.defaults.availabilityText,

@@ -19,10 +19,15 @@ export type TemplateStyle = (typeof TEMPLATE_STYLE_VALUES)[number];
 export interface HeaderData {
   name: string;
   badgeText: string;
+  photoUrl: string;
+  showPhoto: boolean;
+  photoZoom: number;
   headline: string;
   location: string;
   email: string;
+  phone: string;
   linkedin: string;
+  github: string;
   availabilityText: string;
   qrCodeLabel: string;
   qrCodeUrl: string;
@@ -90,6 +95,7 @@ export interface Experience {
   role: string;
   period: string;
   subtitle: string;
+  summary: string;
   bullets: TextItem[];
   techEnvironmentLabel: string;
   techEnvironment: string;

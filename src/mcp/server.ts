@@ -57,10 +57,15 @@ const compactCvDataExample = {
   header: {
     name: "Thomas Dubois",
     badgeText: "T.D",
+    photoUrl: "",
+    showPhoto: false,
+    photoZoom: 100,
     headline: "ARCHITECTE CLOUD SENIOR | AWS | AZURE | KUBERNETES",
     location: "Paris, France",
     email: "thomas.dubois@email.com",
+    phone: "+33 6 12 34 56 78",
     linkedin: "linkedin.com/in/thomas-dubois-cloud",
+    github: "github.com/thomas-dubois",
     availabilityText: "Disponible pour des missions d'architecture cloud et de plateforme.",
     qrCodeLabel: "Version web",
     qrCodeUrl: "https://example.com/cv/thomas-dubois",
@@ -336,7 +341,7 @@ const generatePdfFromCvData = async (
 export const createCvMcpServer = (): McpServer => {
   const server = new McpServer({
     name: "cv-generator-mcp",
-    version: "0.1.0",
+    version: "0.1.3",
   });
 
   server.registerTool(

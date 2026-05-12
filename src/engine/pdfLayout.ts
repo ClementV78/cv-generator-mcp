@@ -217,7 +217,14 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
 
   const sidebar = new Flow(mode, contentHeight);
   sidebar.reserve(92);
-  for (const value of [data.header.location, data.header.email, data.header.linkedin, data.header.availabilityText]) {
+  for (const value of [
+    data.header.location,
+    data.header.email,
+    data.header.phone,
+    data.header.linkedin,
+    data.header.github,
+    data.header.availabilityText,
+  ].filter((value) => value.trim().length > 0)) {
     sidebar.reserve(textHeight(value, bold, 10, sidebarTextWidth) + 4);
   }
   if (data.header.showQrCode) {
@@ -363,6 +370,17 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
       mainWidth - 40,
       `experiences.${experienceIndex}.subtitle`,
     );
+    issueIfTooTall(
+      issues,
+      "Résumé d'expérience",
+      4,
+      experience.summary,
+      data.render.language,
+      regular,
+      8,
+      mainWidth - 44,
+      `experiences.${experienceIndex}.summary`,
+    );
     issueIfTooTall(issues, experience.techEnvironmentLabel, LIMITS.techEnvironmentLines, experience.techEnvironment, data.render.language, regular, 8.75, mainWidth - 52, `experiences.${experienceIndex}.techEnvironment`);
     experience.bullets.forEach((bullet, bulletIndex) =>
       issueIfTooTall(
@@ -379,10 +397,13 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
     );
     const periodHeight = textHeight(experience.period, regular, 8.5, mainWidth - 40);
     const subtitleHeight = textHeight(experience.subtitle, bold, 10.5, mainWidth - 40);
+    const summaryHeight = experience.summary.trim()
+      ? textHeight(experience.summary, regular, 8, mainWidth - 44) + 3
+      : 0;
     const experienceTechHeight = textHeight(`${experience.techEnvironmentLabel} : ${experience.techEnvironment}`, regular, 8.75, mainWidth - 40);
     const bulletHeights = experience.bullets.map((bullet) => textHeight(bullet.text, regular, 10, mainWidth - 54) + 4);
-    let experienceHeight = 48 + periodHeight + subtitleHeight + experienceTechHeight;
-    let relativeOffset = 48 + periodHeight + subtitleHeight;
+    let experienceHeight = 48 + periodHeight + subtitleHeight + summaryHeight + experienceTechHeight;
+    let relativeOffset = 48 + periodHeight + subtitleHeight + summaryHeight;
     mainSoftBreakOffsets.push(experienceStartOffset + relativeOffset);
     bulletHeights.forEach((bulletHeight) => {
       relativeOffset += bulletHeight;
@@ -506,7 +527,14 @@ export const renderCvPdfWithEmbeddedLibrary = async (data: CvData, mode: PdfMode
   });
   sidebar.gap(12);
 
-  for (const text of [data.header.location, data.header.email, data.header.linkedin, data.header.availabilityText]) {
+  for (const text of [
+    data.header.location,
+    data.header.email,
+    data.header.phone,
+    data.header.linkedin,
+    data.header.github,
+    data.header.availabilityText,
+  ].filter((value) => value.trim().length > 0)) {
     const lines = wrapText(text, bold, 10, SIDEBAR_WIDTH - 20);
     drawBlock(sidebar, lines.length * lineHeight(10) + 4, (page, top) => drawLines(page, lines, sidebarX + 12, top, bold, 10, palette.sideText, pageHeight));
   }
@@ -651,10 +679,14 @@ export const renderCvPdfWithEmbeddedLibrary = async (data: CvData, mode: PdfMode
     const companyLines = wrapText(experience.company, bold, 11, mainWidth * 0.36);
     const periodLines = wrapText(experience.period, regular, 8.5, mainWidth - 40);
     const subtitleLines = wrapText(experience.subtitle, bold, 10.5, mainWidth - 40);
+    const summaryLines = experience.summary.trim()
+      ? wrapText(experience.summary, regular, 8, mainWidth - 44)
+      : [];
     const techLines = wrapText(`${experience.techEnvironmentLabel} : ${experience.techEnvironment}`, regular, 8.75, mainWidth - 40);
     const bulletsHeight = collectBulletHeight(experience.bullets, regular, mainWidth - 54);
     const projectsHeight = experience.projects.reduce((total, project) => total + 24 + textHeight(project.title, bold, 11, mainWidth - 68) + textHeight(project.period, regular, 8.5, mainWidth - 68) + collectBulletHeight(project.bullets, regular, mainWidth - 80) + textHeight(`${project.techEnvironmentLabel} : ${project.techEnvironment}`, regular, 8.5, mainWidth - 68), 0);
-    const height = 48 + Math.max(roleLines.length * lineHeight(12.5), companyLines.length * lineHeight(11)) + periodLines.length * lineHeight(8.5) + subtitleLines.length * lineHeight(10.5) + bulletsHeight + projectsHeight + techLines.length * lineHeight(8.75);
+    const summaryHeight = summaryLines.length > 0 ? summaryLines.length * lineHeight(8) + 3 : 0;
+    const height = 48 + Math.max(roleLines.length * lineHeight(12.5), companyLines.length * lineHeight(11)) + periodLines.length * lineHeight(8.5) + subtitleLines.length * lineHeight(10.5) + summaryHeight + bulletsHeight + projectsHeight + techLines.length * lineHeight(8.75);
     drawBlock(main, height, (page, top) => {
       const y = pageHeight - TOP_MARGIN - top - height + 10;
       page.drawCircle({ x: mainX + 6, y: y + height - 22, size: 4.5, borderColor: palette.accent, borderWidth: 1.2 });
@@ -671,6 +703,10 @@ export const renderCvPdfWithEmbeddedLibrary = async (data: CvData, mode: PdfMode
       page.drawRectangle({ x: mainX + 30, y: subtitleY, width: Math.min(mainWidth - 80, 12 + bold.widthOfTextAtSize(experience.subtitle, 10.5)), height: subtitleLines.length * lineHeight(10.5) + 6, color: rgb(1, 1, 1), borderColor: palette.panelLine, borderWidth: 0.5 });
       drawLines(page, subtitleLines, mainX + 36, cursorTop + 3, bold, 10.5, palette.text, pageHeight);
       cursorTop += subtitleLines.length * lineHeight(10.5) + 6;
+      if (summaryLines.length > 0) {
+        drawLines(page, summaryLines, mainX + 34, cursorTop + 2, regular, 8, palette.text, pageHeight);
+        cursorTop += summaryLines.length * lineHeight(8) + 3;
+      }
       experience.bullets.forEach((bullet) => {
         const lines = wrapText(bullet.text, regular, 10, mainWidth - 54);
         const bulletY = pageHeight - TOP_MARGIN - cursorTop - 9;

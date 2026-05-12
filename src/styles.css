@@ -858,6 +858,60 @@ input {
   font-weight: 800;
 }
 
+.cv-photo {
+  width: 114px;
+  height: 114px;
+  border-radius: 50%;
+  border: 2px solid var(--badge-accent);
+  overflow: hidden;
+  margin: 0 auto 18px;
+  background: color-mix(in srgb, var(--sidebar-card-bg) 80%, black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cv-photo img {
+  flex: none;
+  display: block;
+  object-fit: cover;
+}
+
+.photo-zoom {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin: -8px auto 12px;
+  max-width: 128px;
+  color: var(--sidebar-contact-color);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.photo-zoom input {
+  min-width: 0;
+  accent-color: var(--badge-accent);
+}
+
+.photo-actions {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: -6px auto 18px;
+  flex-wrap: wrap;
+}
+
+.photo-actions button {
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--sidebar-text) 35%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--sidebar-card-bg) 78%, transparent);
+  color: var(--sidebar-text);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
 .badge-text {
   text-align: center;
   font-size: 2.15rem;
@@ -1029,7 +1083,7 @@ input {
 }
 
 .template-compact .skill-group-body {
-  gap: 7px;
+  gap: 6px;
 }
 
 .skill-row {
@@ -1037,6 +1091,20 @@ input {
   border-radius: 12px;
   padding: 10px 12px;
   border: 1px solid rgba(127, 214, 255, 0.1);
+}
+
+.template-compact .skill-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px;
+  align-items: center;
+  column-gap: 9px;
+  padding: 7px 9px;
+  border-radius: 10px;
+}
+
+.mode-edit .template-compact .skill-row {
+  display: block;
+  padding: 9px;
 }
 
 .skill-row-main {
@@ -1047,6 +1115,18 @@ input {
   margin-bottom: 7px;
 }
 
+.template-compact .skill-row-main {
+  min-width: 0;
+  margin-bottom: 0;
+  gap: 6px;
+  font-size: 0.83rem;
+  line-height: 1.18;
+}
+
+.template-compact .skill-row-main .editable-text {
+  min-width: 0;
+}
+
 .skill-level-value {
   color: var(--sidebar-card-text-soft);
   font-size: 0.84rem;
@@ -1055,14 +1135,24 @@ input {
 
 .skill-track {
   height: 6px;
-  border-radius: 999px;
-  background: var(--skill-track-bg);
-  overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+}
+
+.template-compact .skill-track {
+  height: 4px;
+  gap: 2px;
 }
 
 .skill-track span {
   display: block;
   height: 100%;
+  border-radius: 999px;
+  background: var(--skill-track-bg);
+}
+
+.skill-track span.is-filled {
   background: linear-gradient(
     90deg,
     var(--progress-accent),
@@ -1074,9 +1164,45 @@ input {
   display: none;
 }
 
+.mode-edit .skill-row-main {
+  margin-bottom: 8px;
+}
+
+.mode-edit .template-compact .skill-row-main {
+  margin-bottom: 8px;
+}
+
+.mode-edit .skill-row-actions {
+  width: 100%;
+}
+
+.skill-edit-level {
+  display: none;
+}
+
+.mode-edit .skill-edit-level {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 62px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--progress-accent) 16%, transparent);
+  color: var(--sidebar-card-text);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .skill-row-actions input[type="range"] {
   flex: 1 1 180px;
+  min-width: 0;
   accent-color: var(--progress-accent);
+}
+
+.mode-edit .template-compact .skill-row-actions input[type="range"] {
+  flex: 1 1 120px;
+  width: auto;
 }
 
 .tag-cloud {
@@ -1261,111 +1387,6 @@ input {
 .template-compact .card-meta {
   font-size: 0.75rem;
   margin-top: 3px;
-}
-
-.skill-radar-card {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--sidebar-card-bg) 90%, white 2%),
-    color-mix(in srgb, var(--sidebar-card-bg) 82%, transparent)
-  );
-  border: 1px solid color-mix(in srgb, var(--sidebar-card-border) 90%, transparent);
-  border-radius: 14px;
-  padding: 10px 8px 8px;
-}
-
-.skill-radar-visual {
-  display: grid;
-  place-items: center;
-  margin-bottom: 6px;
-}
-
-.skill-radar-visual svg {
-  width: 100%;
-  max-width: 290px;
-  height: auto;
-  overflow: visible;
-}
-
-.skill-radar-ring {
-  fill: none;
-  stroke: color-mix(in srgb, var(--sidebar-card-border) 88%, transparent);
-  stroke-width: 1;
-}
-
-.skill-radar-axis {
-  stroke: color-mix(in srgb, var(--sidebar-card-border) 72%, transparent);
-  stroke-width: 1;
-}
-
-.skill-radar-area {
-  fill: color-mix(in srgb, var(--ui-accent) 30%, transparent);
-  stroke: var(--ui-accent);
-  stroke-width: 2;
-}
-
-.skill-radar-node {
-  fill: var(--ui-accent);
-  stroke: white;
-  stroke-width: 1.4;
-}
-
-.skill-radar-label {
-  fill: var(--sidebar-text-soft);
-  font-size: 14px;
-  font-weight: 800;
-  dominant-baseline: middle;
-}
-
-.skill-radar-legend {
-  display: grid;
-  gap: 6px;
-}
-
-.skill-radar-legend-row {
-  border-top: 1px solid color-mix(in srgb, var(--sidebar-card-border) 72%, transparent);
-  padding-top: 6px;
-}
-
-.skill-radar-legend-main {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--sidebar-card-text);
-  font-size: 0.86rem;
-  font-weight: 700;
-}
-
-.skill-radar-legend-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.skill-radar-legend-actions input[type="range"] {
-  flex: 1 1 auto;
-  accent-color: var(--progress-accent);
-}
-
-.template-compact .skill-radar-card {
-  padding: 8px 6px 6px;
-}
-
-.template-compact .skill-radar-label {
-  font-size: 13px;
-}
-
-.template-compact .skill-radar-legend {
-  gap: 5px;
-}
-
-.template-compact .skill-radar-legend-row {
-  padding-top: 5px;
-}
-
-.template-compact .skill-radar-legend-main {
-  font-size: 0.79rem;
 }
 
 .card-meta.soft {
@@ -1587,6 +1608,19 @@ input {
   padding: 6px 9px;
   border-radius: 9px;
   font-size: 0.79rem;
+}
+
+.experience-summary {
+  margin-top: 8px;
+  color: var(--main-text-color);
+  font-size: 0.9rem;
+  line-height: 1.42;
+}
+
+.template-compact .experience-summary {
+  margin-top: 7px;
+  font-size: 0.76rem;
+  line-height: 1.24;
 }
 
 .bullet-list {
@@ -1847,6 +1881,12 @@ input {
     margin-bottom: 18px;
   }
 
+  .cv-photo {
+    width: 92px;
+    height: 92px;
+    margin-bottom: 14px;
+  }
+
   .badge-text {
     font-size: 1.7rem;
   }
@@ -1972,6 +2012,12 @@ input {
     font-size: 0.76rem;
   }
 
+  .experience-summary {
+    margin-top: 6px;
+    font-size: 0.72rem;
+    line-height: 1.18;
+  }
+
   .experience-period,
   .project-period {
     margin-top: 5px;
@@ -2022,18 +2068,6 @@ input {
     padding: 7px 8px;
     font-size: 0.76rem;
     line-height: 1.26;
-  }
-
-  .cv-sheet.template-compact .skill-radar-card {
-    padding: 6px 4px 4px;
-  }
-
-  .cv-sheet.template-compact .skill-radar-visual svg {
-    max-width: 250px;
-  }
-
-  .cv-sheet.template-compact .skill-radar-label {
-    font-size: 11px;
   }
 
   .qr-block {
