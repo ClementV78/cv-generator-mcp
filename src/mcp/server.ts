@@ -56,14 +56,35 @@ const chunkUploadSessions = new Map<string, ChunkUploadSession>();
 const compactCvDataExample = {
   header: {
     name: "Thomas Dubois",
+    badgeText: "T.D",
     headline: "ARCHITECTE CLOUD SENIOR | AWS | AZURE | KUBERNETES",
     location: "Paris, France",
     email: "thomas.dubois@email.com",
     linkedin: "linkedin.com/in/thomas-dubois-cloud",
+    availabilityText: "Disponible pour des missions d'architecture cloud et de plateforme.",
+    qrCodeLabel: "Version web",
+    qrCodeUrl: "https://example.com/cv/thomas-dubois",
+    showQrCode: false,
   },
   profileLabel: "Profil professionnel",
   profile:
     "Architecte Cloud senior avec experience en plateformes scalables, migration cloud et optimisation des couts.",
+  skillGroups: [
+    {
+      title: "Cloud & Architecture",
+      type: "bars",
+      items: [
+        { label: "AWS", level: 92 },
+        { label: "Kubernetes", level: 84 },
+        { label: "Terraform", level: 88 },
+        { label: "CI/CD", level: 81 },
+      ],
+    },
+  ],
+  highlights: [{ text: "Architecture cloud, migration et plateforme." }],
+  certifications: [],
+  formations: [],
+  languages: [],
   experiences: [
     {
       company: "CloudScale Solutions",
@@ -104,6 +125,8 @@ const compactCvDataExample = {
     theme: "ocean",
     sidebarPosition: "left",
     language: "french",
+    templateStyle: "compact",
+    showSkillLevels: false,
   },
 } as const;
 
@@ -321,7 +344,7 @@ export const createCvMcpServer = (): McpServer => {
     {
       title: "Generate CV HTML",
       description:
-        "Genere un CV HTML propre a partir d'un CvData JSON (max 5000 caracteres en appel direct). Au-dela, utiliser start_cv_chunked_generation + append_cv_generation_chunk.",
+        "Genere un CV HTML propre a partir d'un CvData JSON (max 5000 caracteres en appel direct). Les options visuelles du template restent dans cv_data.render, y compris templateStyle (classic|compact) et showSkillLevels. Au-dela, utiliser start_cv_chunked_generation + append_cv_generation_chunk.",
       inputSchema: cvDataInputSchema.shape,
       annotations: {
         readOnlyHint: true,
@@ -349,7 +372,7 @@ export const createCvMcpServer = (): McpServer => {
     {
       title: "Generate CV PDF",
       description:
-        "Genere un CV PDF headless a partir d'un CvData JSON (max 5000 caracteres en appel direct). Au-dela, utiliser start_cv_chunked_generation + append_cv_generation_chunk. Le resultat inclut file_path: toujours le relayer explicitement a l'utilisateur.",
+        "Genere un CV PDF headless a partir d'un CvData JSON (max 5000 caracteres en appel direct). Les options visuelles du template restent dans cv_data.render, y compris templateStyle (classic|compact) et showSkillLevels. Au-dela, utiliser start_cv_chunked_generation + append_cv_generation_chunk. Le resultat inclut file_path: toujours le relayer explicitement a l'utilisateur.",
       inputSchema: pdfToolInputSchema.shape,
       annotations: {
         readOnlyHint: false,
@@ -376,7 +399,8 @@ export const createCvMcpServer = (): McpServer => {
     "validate_cv",
     {
       title: "Validate CV",
-      description: "Valide un CvData et mesure sa pagination rendue.",
+      description:
+        "Valide un CvData, mesure sa pagination rendue et retourne normalized_cv_data. Les champs render.templateStyle et render.showSkillLevels sont normalises avec le reste du contrat.",
       inputSchema: cvDataInputSchema.shape,
       annotations: {
         readOnlyHint: true,
@@ -678,7 +702,7 @@ export const createCvMcpServer = (): McpServer => {
     {
       title: "Get CV Schema",
       description:
-        "Retourne le JSON Schema du contrat CvData avec un exemple et des hints de workflow (schema -> validate_cv -> generate_cv_pdf/html).",
+        "Retourne le JSON Schema du contrat CvData avec un exemple et des hints de workflow (schema -> validate_cv -> generate_cv_pdf/html), y compris les options render.templateStyle et render.showSkillLevels.",
       inputSchema: z.object({}).shape,
       annotations: {
         readOnlyHint: true,
