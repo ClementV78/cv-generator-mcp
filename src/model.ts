@@ -58,7 +58,7 @@ const asCvLanguage = (value: unknown, fallback: CvLanguage = "english"): CvLangu
   normalizeCvLanguage(value, fallback);
 
 const asTemplateStyle = (value: unknown, fallback: TemplateStyle = "classic"): TemplateStyle =>
-  value === "compact" ? "compact" : fallback;
+  value === "compact" || value === "ultra-compact" ? value : fallback;
 
 const getDefaultBadgeText = (fullName: string): string => {
   const parts = fullName
@@ -458,7 +458,7 @@ const normalizeExperience = (input: unknown): Experience => {
     company: asString(item.company, copy.defaults.newExperienceCompany),
     role: asString(item.role, copy.defaults.newExperienceRole),
     period: asString(item.period, "2025"),
-    subtitle: asString(item.subtitle, copy.defaults.newExperienceSubtitle),
+    subtitle: asString(item.subtitle, ""),
     summary: asString(item.summary, ""),
     bullets: asArray<unknown>(item.bullets).map((entry) =>
       normalizeTextItem(entry, copy.defaults.newExperienceBullet),
@@ -488,6 +488,7 @@ export const normalizeCvData = (input: unknown): CvData => {
       name,
       badgeText: asString(header.badgeText, getDefaultBadgeText(name)),
       photoUrl: asString(header.photoUrl, ""),
+      photoPath: asString(header.photoPath, ""),
       showPhoto: asBoolean(header.showPhoto, false),
       photoZoom: Math.min(180, Math.max(80, asNumber(header.photoZoom, 100))),
       headline: asString(

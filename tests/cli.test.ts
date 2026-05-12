@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { access, rm } from "node:fs/promises";
+import { access, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -54,6 +54,39 @@ test("CLI validate-cv returns diagnostics for a valid fixture", () => {
   assert.equal(payload.success, true);
   assert.equal(payload.page_count >= 1, true);
   assert.equal(payload.normalized_cv_data.header.name.length > 0, true);
+});
+
+test("CLI reports invalid cv_data JSON with file and parser details", async () => {
+  const invalidJsonPath = path.join(projectRoot, ".tmp-invalid-cv.json");
+  try {
+    await writeFile(
+      invalidJsonPath,
+      '{\n  "header": {\n    "name": "Invalid",\n  }\n}\n',
+      "utf8",
+    );
+
+    const result = runCli("validate-cv", "--cv-data", invalidJsonPath);
+    assert.equal(result.status, 1);
+
+    const payload = parseCliJson<{
+      success: boolean;
+      error_code: string;
+      absolute_path: string;
+      parse_error: string;
+      hint: string;
+      line?: number;
+      column?: number;
+    }>(result.stdout);
+    assert.equal(payload.success, false);
+    assert.equal(payload.error_code, "invalid_cv_data_json");
+    assert.equal(payload.absolute_path, invalidJsonPath);
+    assert.match(payload.parse_error, /JSON/);
+    assert.match(payload.hint, /virgule finale/);
+    assert.equal(typeof payload.line, "number");
+    assert.equal(typeof payload.column, "number");
+  } finally {
+    await rm(invalidJsonPath, { force: true });
+  }
 });
 
 test("CLI generate-cv-html writes the artifact and returns file_path", async () => {

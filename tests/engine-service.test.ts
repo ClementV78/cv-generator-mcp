@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateCvArtifact, getCvSchema, validateCvInput } from "../src/engine/service";
+import { writeBinaryArtifactToTempFile } from "../src/engine/output";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const minimalFixturePath = path.join(__dirname, "fixtures", "cv-minimal.json");
@@ -19,11 +21,17 @@ test("getCvSchema exposes the expected render contract", () => {
   const schema = getCvSchema();
 
   assert.equal(schema.title, "CvData");
+  assert.equal(schema.properties.header.properties.photoPath.type, "string");
+  assert.match(schema.properties.header.properties.photoPath.description, /photoPath/);
   assert.deepEqual(schema.properties.render.properties.sidebarPosition.enum, ["left", "right"]);
   assert(schema.properties.render.properties.theme.enum.includes("ocean"));
   assert.equal(schema.properties.render.properties.theme.enum.includes("zen-sunset"), false);
   assert.deepEqual(schema.properties.render.properties.language.enum, ["english", "french", "spanish"]);
-  assert.deepEqual(schema.properties.render.properties.templateStyle.enum, ["classic", "compact"]);
+  assert.deepEqual(schema.properties.render.properties.templateStyle.enum, [
+    "classic",
+    "compact",
+    "ultra-compact",
+  ]);
   assert.equal(schema.properties.render.properties.showSkillLevels.type, "boolean");
 });
 
@@ -39,6 +47,58 @@ test("validateCvInput normalizes the fixture and returns structure messages", as
   assert.equal(result.cvData.render.showSkillLevels, true);
 });
 
+test("validateCvInput resolves local header.photoPath into a data URL", async () => {
+  const fixture = cloneJson((await readMinimalFixture()) as Record<string, unknown>);
+  const assetDir = await mkdtemp(path.join(os.tmpdir(), "cv-generator-assets-"));
+  const photoPath = path.join(assetDir, "photo.png");
+  const previousAllowedAssetDir = process.env.CV_GENERATOR_ALLOWED_ASSET_DIR;
+
+  await writeFile(
+    photoPath,
+    Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  );
+
+  process.env.CV_GENERATOR_ALLOWED_ASSET_DIR = assetDir;
+  (fixture.header as Record<string, unknown>).photoPath = photoPath;
+  (fixture.header as Record<string, unknown>).photoUrl = "";
+  (fixture.header as Record<string, unknown>).showPhoto = true;
+
+  try {
+    const result = await validateCvInput(fixture, { measureRender: false });
+
+    assert.equal(result.cvData.header.photoPath, photoPath);
+    assert.match(result.cvData.header.photoUrl, /^data:image\/png;base64,/);
+  } finally {
+    if (previousAllowedAssetDir === undefined) {
+      delete process.env.CV_GENERATOR_ALLOWED_ASSET_DIR;
+    } else {
+      process.env.CV_GENERATOR_ALLOWED_ASSET_DIR = previousAllowedAssetDir;
+    }
+  }
+});
+
+test("validateCvInput keeps missing experience subtitles hidden", async () => {
+  const fixture = cloneJson((await readMinimalFixture()) as Record<string, unknown>);
+  fixture.experiences = [
+    {
+      company: "Example Corp",
+      role: "Cloud Engineer",
+      period: "2025",
+      bullets: [{ text: "Built cloud automation." }],
+      techEnvironmentLabel: "Environment",
+      techEnvironment: "AWS, Terraform",
+      projects: [],
+    },
+  ];
+
+  const result = await validateCvInput(fixture, { measureRender: false });
+
+  assert.equal(result.cvData.experiences[0]?.subtitle, "");
+});
+
 test("generateCvArtifact renders HTML without editor chrome", async () => {
   const fixture = await readMinimalFixture();
   const result = await generateCvArtifact(fixture, { format: "html" });
@@ -47,6 +107,27 @@ test("generateCvArtifact renders HTML without editor chrome", async () => {
   assert.match(result.content, /<!doctype html>/i);
   assert.match(result.content, /cv-sheet/);
   assert.doesNotMatch(result.content, /Template Editor/i);
+});
+
+test("writeBinaryArtifactToTempFile honors CV_GENERATOR_OUTPUT_DIR", async () => {
+  const outputDir = await mkdtemp(path.join(os.tmpdir(), "cv-generator-output-"));
+  const previousOutputDir = process.env.CV_GENERATOR_OUTPUT_DIR;
+
+  process.env.CV_GENERATOR_OUTPUT_DIR = outputDir;
+
+  try {
+    const filePath = await writeBinaryArtifactToTempFile("cv-template.pdf", new Uint8Array([1, 2, 3]));
+
+    assert.equal(path.dirname(filePath), outputDir);
+    assert.match(path.basename(filePath), /^cv-template-\d+\.pdf$/);
+    await access(filePath);
+  } finally {
+    if (previousOutputDir === undefined) {
+      delete process.env.CV_GENERATOR_OUTPUT_DIR;
+    } else {
+      process.env.CV_GENERATOR_OUTPUT_DIR = previousOutputDir;
+    }
+  }
 });
 
 test("generateCvArtifact localizes HTML chrome for english and spanish CVs", async () => {

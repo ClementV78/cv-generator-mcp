@@ -1,6 +1,6 @@
 {
   "name": "@xclem/cv-generator-mcp",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Local MCP server and skill bundle for generating and validating CvData-based resumes.",
   "type": "module",
   "bin": {

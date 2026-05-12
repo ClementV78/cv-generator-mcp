@@ -60,7 +60,7 @@ The web editor supports:
 - editing content
 - choosing the CV language (`english | french | spanish`)
 - choosing the theme
-- choosing the template style (`classic | compact`)
+- choosing the template style (`classic | compact | ultra-compact`)
 - toggling exact skill percentages (`showSkillLevels`)
 - configuring the sidebar
 - importing / exporting JSON
@@ -70,6 +70,7 @@ Template style behavior:
 
 - `classic`: current default layout with standard skill bars
 - `compact`: denser layout, reduced spacing, and radar rendering for bar-based skill groups when relevant
+- `ultra-compact`: one-column dense layout for long CVs, with skills near the top
 
 ### 2. LLM / agent usage
 
@@ -79,6 +80,7 @@ The local MCP server supports:
 - generating HTML
 - generating PDF in `paginated | continuous` mode
 - retrieving the JSON schema
+- reading `CvData` from a local JSON file through `cv_data_path`
 - generating through a chunked workflow when `cv_data` exceeds 5000 characters
 
 Important:
@@ -86,6 +88,9 @@ Important:
 - the MCP tool never calls the UI
 - it calls the Node engine
 - the MCP server runs over `stdio`, not HTTP
+- `cv_data_path` is resolved from the MCP server process, so use Windows paths when the MCP server runs on Windows
+- for a local profile photo, prefer `header.photoPath` over raw `header.photoUrl`; configure `CV_GENERATOR_ALLOWED_ASSET_DIR` if the image is outside the MCP server current working directory
+- generated PDF files are written to `CV_GENERATOR_OUTPUT_DIR` when configured, otherwise to the system temp directory
 - for fake or realistic CV generation, starting from an existing example in `examples/` is more reliable than rebuilding JSON manually in an intermediate script
 
 ### 3. Script / terminal usage
@@ -165,14 +170,32 @@ mcp_servers:
     args:
       - "-y"
       - "@xclem/cv-generator-mcp"
+    env:
+      CV_GENERATOR_ALLOWED_INPUT_DIR: "C:\\Users\\xclem\\cv-inputs"
+      CV_GENERATOR_ALLOWED_ASSET_DIR: "C:\\Users\\xclem\\cv-assets"
+      CV_GENERATOR_OUTPUT_DIR: "C:\\Users\\xclem\\cv-output"
     timeout: 180
     connect_timeout: 60
 ```
 
-### Claude Code MCP config
+### Claude Code MCP config on Windows PowerShell
+
+```powershell
+claude mcp add cv-generator `
+  -e CV_GENERATOR_ALLOWED_INPUT_DIR="C:\Users\xclem\cv-inputs" `
+  -e CV_GENERATOR_ALLOWED_ASSET_DIR="C:\Users\xclem\cv-assets" `
+  -e CV_GENERATOR_OUTPUT_DIR="C:\Users\xclem\cv-output" `
+  -- npx.cmd -y @xclem/cv-generator-mcp@0.1.4
+```
+
+### Claude Code MCP config on macOS / Linux
 
 ```bash
-claude mcp add cv-generator -- npx -y @xclem/cv-generator-mcp
+claude mcp add cv-generator \
+  -e CV_GENERATOR_ALLOWED_INPUT_DIR="$HOME/cv-inputs" \
+  -e CV_GENERATOR_ALLOWED_ASSET_DIR="$HOME/cv-assets" \
+  -e CV_GENERATOR_OUTPUT_DIR="$HOME/cv-output" \
+  -- npx -y @xclem/cv-generator-mcp@0.1.4
 ```
 
 ### Repo-shipped skill
@@ -298,6 +321,7 @@ The main rules to remember are:
 - `theme`, `sidebarPosition`, `maxPages`, `language`, `templateStyle`, and `showSkillLevels` live inside `cv_data.render`
 - schema keys remain in English regardless of the visible CV language
 - `pdf_mode` and `browser_executable_path` (optional) are MCP execution parameters, not business fields of the CV
+- MCP tools accept either inline `cv_data` or `cv_data_path`, but not both in the same call
 
 Example:
 
@@ -430,6 +454,11 @@ Validates a `CvData`, normalizes the input, and returns:
 - `structure_messages`
 - `normalized_cv_data`
 
+Input:
+
+- `cv_data` for small inline payloads
+- `cv_data_path` for a local `.json` file readable by the MCP server process
+
 ### `generate_cv_html`
 
 Generates the final CV HTML without editor chrome.
@@ -437,7 +466,7 @@ Generates the final CV HTML without editor chrome.
 Direct-call limit:
 
 - `cv_data` stringified length must be `<= 5000`
-- otherwise, use the chunked workflow
+- otherwise, prefer `cv_data_path`; use the chunked workflow as fallback
 
 ### `generate_cv_pdf`
 
@@ -449,7 +478,88 @@ Generates a PDF through `Vivliostyle` from the HTML/CSS template:
 Direct-call limit:
 
 - `cv_data` stringified length must be `<= 5000`
-- otherwise, use the chunked workflow
+- otherwise, prefer `cv_data_path`; use the chunked workflow as fallback
+
+### Local file input with `cv_data_path`
+
+For large CVs, write the JSON to a local file and pass only its path to the MCP tool:
+
+```json
+{
+  "cv_data_path": "C:\\Users\\xclem\\cv-inputs\\cv.json",
+  "pdf_mode": "continuous"
+}
+```
+
+The path must be valid from the MCP server process. If the MCP server runs on Windows, use a Windows path. If an agent runs in WSL but the MCP server runs on Windows, convert paths before calling the tool, for example with `wslpath -w`.
+
+By default, the server accepts files under its current working directory. To allow a dedicated input folder, set:
+
+```json
+{
+  "env": {
+    "CV_GENERATOR_ALLOWED_INPUT_DIR": "C:\\Users\\xclem\\cv-inputs"
+  }
+}
+```
+
+Safety rules:
+
+- `cv_data_path` must resolve inside `CV_GENERATOR_ALLOWED_INPUT_DIR`, or inside the MCP server `cwd` when the env var is absent
+- the file must have a `.json` extension
+- the file size must be `<= 1000000` bytes
+
+### Local photo input with `photoPath`
+
+For local MCP / CLI usage, prefer `header.photoPath` for a profile photo instead of embedding raw base64 in `header.photoUrl`:
+
+```json
+{
+  "header": {
+    "showPhoto": true,
+    "photoPath": "C:\\Users\\xclem\\cv-assets\\photo.jpg",
+    "photoUrl": ""
+  }
+}
+```
+
+At runtime, the Node engine reads the file, converts it to a data URL, and uses that value for rendering. `photoUrl` remains supported for remote URLs or already encoded data URLs, but `photoPath` takes precedence when present.
+
+The path must be valid from the MCP server process. If the MCP server runs on Windows, use a Windows path.
+
+By default, photo files must resolve inside the server current working directory. To authorize a dedicated asset directory, configure:
+
+```json
+{
+  "env": {
+    "CV_GENERATOR_ALLOWED_ASSET_DIR": "C:\\Users\\xclem\\cv-assets"
+  }
+}
+```
+
+Safety rules:
+
+- `photoPath` must resolve inside `CV_GENERATOR_ALLOWED_ASSET_DIR`, or inside the MCP server `cwd` when the env var is absent
+- accepted extensions: `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`
+- max file size: `5000000` bytes
+
+### Output directory with `CV_GENERATOR_OUTPUT_DIR`
+
+MCP `generate_cv_pdf` writes the generated PDF to disk and returns `file_path`.
+
+By default, files are written under the system temp directory. To make outputs easier to find, configure:
+
+```json
+{
+  "env": {
+    "CV_GENERATOR_OUTPUT_DIR": "C:\\Users\\xclem\\cv-output"
+  }
+}
+```
+
+The directory is created automatically if it does not exist.
+
+For CLI usage, `--output <file>` still takes precedence. If `--output` is absent, `CV_GENERATOR_OUTPUT_DIR` is used when configured.
 
 ### `start_cv_chunked_generation`
 
@@ -501,9 +611,9 @@ For `generate_cv_html` and `generate_cv_pdf`:
 
 Recommended workflow for large CVs:
 
-1. `start_cv_chunked_generation`
-2. `append_cv_generation_chunk` for each fragment (`chunk_index` from `0` to `total_chunks - 1`)
-3. the server finalizes automatically on the last chunk
+1. write the JSON to a local `.json` file in the allowed input directory
+2. call `validate_cv`, `generate_cv_html`, or `generate_cv_pdf` with `cv_data_path`
+3. use `start_cv_chunked_generation` + `append_cv_generation_chunk` only when file input is not available
 
 ## Behavior when the page limit is exceeded
 

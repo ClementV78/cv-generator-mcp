@@ -275,6 +275,33 @@ app.addEventListener("click", async (event) => {
     return;
   }
 
+  if (action === "clear-field") {
+    const bind = actionTarget.dataset.bind;
+
+    if (!bind) {
+      return;
+    }
+
+    store.update((draft) => {
+      setValueAtPath(draft as unknown as Record<string, unknown>, bind, "");
+    });
+    return;
+  }
+
+  if (action === "set-field") {
+    const bind = actionTarget.dataset.bind;
+    const value = actionTarget.dataset.value ?? "";
+
+    if (!bind) {
+      return;
+    }
+
+    store.update((draft) => {
+      setValueAtPath(draft as unknown as Record<string, unknown>, bind, value);
+    });
+    return;
+  }
+
   if (action === "trigger-import") {
     app.querySelector<HTMLInputElement>("#json-import-input")?.click();
     return;
@@ -513,7 +540,10 @@ app.addEventListener("change", (event) => {
   }
 
   if (action === "set-template-style" && target instanceof HTMLSelectElement) {
-    const value = target.value === "compact" ? "compact" : "classic";
+    const value =
+      target.value === "compact" || target.value === "ultra-compact"
+        ? target.value
+        : "classic";
     store.update((draft) => {
       draft.render.templateStyle = value;
     });

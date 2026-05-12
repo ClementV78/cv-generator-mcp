@@ -1,3 +1,5 @@
+import { readFile, realpath, stat } from "node:fs/promises";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import process from "node:process";
@@ -12,11 +14,16 @@ import { PdfRenderError } from "../engine/renderPdf";
 const MAX_SINGLE_CALL_CV_DATA_CHARS = 5000;
 const MAX_CHUNK_CHARS = 5000;
 const MAX_TOTAL_CHUNKED_CV_DATA_CHARS = 500_000;
+const MAX_CV_DATA_FILE_BYTES = 1_000_000;
 const UPLOAD_SESSION_TTL_MS = 10 * 60 * 1000;
 const MAX_ACTIVE_UPLOAD_SESSIONS = 64;
+const ALLOWED_INPUT_DIR_ENV = "CV_GENERATOR_ALLOWED_INPUT_DIR";
+const ALLOWED_ASSET_DIR_ENV = "CV_GENERATOR_ALLOWED_ASSET_DIR";
+const OUTPUT_DIR_ENV = "CV_GENERATOR_OUTPUT_DIR";
 
 const cvDataInputSchema = z.object({
-  cv_data: z.unknown(),
+  cv_data: z.unknown().optional(),
+  cv_data_path: z.string().min(1).optional(),
   browser_executable_path: z.string().optional(),
 });
 
@@ -58,6 +65,7 @@ const compactCvDataExample = {
     name: "Thomas Dubois",
     badgeText: "T.D",
     photoUrl: "",
+    photoPath: "",
     showPhoto: false,
     photoZoom: 100,
     headline: "ARCHITECTE CLOUD SENIOR | AWS | AZURE | KUBERNETES",
@@ -206,17 +214,218 @@ const getSerializedLength = (value: unknown): number | null => {
   }
 };
 
+type CvDataSource =
+  | {
+      cvData: unknown;
+      source: "inline";
+      serializedLength: number;
+    }
+  | {
+      cvData: unknown;
+      source: "file";
+      resolvedPath: string;
+      fileSizeBytes: number;
+    };
+
+const isPathInsideDirectory = (candidatePath: string, directoryPath: string): boolean => {
+  const relativePath = path.relative(directoryPath, candidatePath);
+  return relativePath === "" || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath));
+};
+
+const getAllowedInputDirectory = async (): Promise<string> => {
+  const configuredDirectory = process.env[ALLOWED_INPUT_DIR_ENV] ?? process.cwd();
+  return realpath(path.resolve(configuredDirectory));
+};
+
+const loadCvDataFromPath = async (cvDataPath: string): Promise<CvDataSource> => {
+  const allowedDirectory = await getAllowedInputDirectory();
+  const resolvedInputPath = path.resolve(cvDataPath);
+  const resolvedFilePath = await realpath(resolvedInputPath);
+
+  if (!isPathInsideDirectory(resolvedFilePath, allowedDirectory)) {
+    throw Object.assign(
+      new Error(
+        `cv_data_path doit pointer vers un fichier situe dans ${ALLOWED_INPUT_DIR_ENV} ou le repertoire de travail du serveur MCP.`,
+      ),
+      {
+        code: "cv_data_path_outside_allowed_directory",
+        details: {
+          cv_data_path: cvDataPath,
+          resolved_cv_data_path: resolvedFilePath,
+          allowed_input_dir: allowedDirectory,
+        },
+      },
+    );
+  }
+
+  if (path.extname(resolvedFilePath).toLowerCase() !== ".json") {
+    throw Object.assign(new Error("cv_data_path doit pointer vers un fichier .json."), {
+      code: "invalid_cv_data_path_extension",
+      details: {
+        cv_data_path: cvDataPath,
+        resolved_cv_data_path: resolvedFilePath,
+      },
+    });
+  }
+
+  const fileStat = await stat(resolvedFilePath);
+  if (!fileStat.isFile()) {
+    throw Object.assign(new Error("cv_data_path doit pointer vers un fichier JSON."), {
+      code: "cv_data_path_not_file",
+      details: {
+        cv_data_path: cvDataPath,
+        resolved_cv_data_path: resolvedFilePath,
+      },
+    });
+  }
+
+  if (fileStat.size > MAX_CV_DATA_FILE_BYTES) {
+    throw Object.assign(
+      new Error(`Fichier cv_data trop volumineux: maximum ${MAX_CV_DATA_FILE_BYTES} octets.`),
+      {
+        code: "cv_data_file_too_large",
+        details: {
+          cv_data_path: cvDataPath,
+          resolved_cv_data_path: resolvedFilePath,
+          max_file_bytes: MAX_CV_DATA_FILE_BYTES,
+          received_file_bytes: fileStat.size,
+        },
+      },
+    );
+  }
+
+  const fileText = await readFile(resolvedFilePath, "utf-8");
+  try {
+    return {
+      cvData: JSON.parse(fileText) as unknown,
+      source: "file",
+      resolvedPath: resolvedFilePath,
+      fileSizeBytes: fileStat.size,
+    };
+  } catch (error) {
+    throw Object.assign(new Error(getErrorMessage(error, "Le fichier cv_data_path contient un JSON invalide.")), {
+      code: "invalid_cv_data_file_json",
+      details: {
+        cv_data_path: cvDataPath,
+        resolved_cv_data_path: resolvedFilePath,
+      },
+    });
+  }
+};
+
+const resolveCvDataSource = async (
+  cvData: unknown,
+  cvDataPath: string | undefined,
+): Promise<CvDataSource> => {
+  const hasInlineCvData = cvData !== undefined;
+  const hasCvDataPath = cvDataPath !== undefined;
+
+  if (hasInlineCvData && hasCvDataPath) {
+    throw Object.assign(new Error("Fournissez soit cv_data, soit cv_data_path, mais pas les deux."), {
+      code: "ambiguous_cv_data_input",
+      details: {
+        accepted_inputs: ["cv_data", "cv_data_path"],
+      },
+    });
+  }
+
+  if (!hasInlineCvData && !hasCvDataPath) {
+    throw Object.assign(new Error("Option manquante: fournissez cv_data ou cv_data_path."), {
+      code: "missing_cv_data_input",
+      details: {
+        accepted_inputs: ["cv_data", "cv_data_path"],
+      },
+    });
+  }
+
+  if (hasCvDataPath) {
+    return loadCvDataFromPath(cvDataPath);
+  }
+
+  const serializedLength = getSerializedLength(cvData);
+  if (serializedLength === null) {
+    throw Object.assign(new Error("Impossible de serialiser cv_data en JSON."), {
+      code: "invalid_cv_data_payload",
+    });
+  }
+
+  return {
+    cvData,
+    source: "inline",
+    serializedLength,
+  };
+};
+
+const createCvDataSourceError = (error: unknown) => {
+  const maybeStructuredError = error as { code?: unknown; details?: unknown };
+  return createErrorResponse(
+    getErrorMessage(error, "Impossible de charger cv_data."),
+    typeof maybeStructuredError.code === "string" ? maybeStructuredError.code : "invalid_cv_data_input",
+    maybeStructuredError.details &&
+      typeof maybeStructuredError.details === "object" &&
+      !Array.isArray(maybeStructuredError.details)
+      ? (maybeStructuredError.details as Record<string, unknown>)
+      : {},
+  );
+};
+
+const createStructuredErrorResponse = (error: unknown, fallbackMessage: string) => {
+  const maybeStructuredError = error as { code?: unknown; details?: unknown };
+  const details =
+    maybeStructuredError.details &&
+    typeof maybeStructuredError.details === "object" &&
+    !Array.isArray(maybeStructuredError.details)
+      ? (maybeStructuredError.details as Record<string, unknown>)
+      : {};
+
+  return createErrorResponse(
+    getErrorMessage(error, fallbackMessage),
+    typeof maybeStructuredError.code === "string" ? maybeStructuredError.code : getErrorCode(error),
+    details,
+  );
+};
+
+const createPageLimitExceededResponse = (
+  pageCount: number,
+  issues: unknown[],
+  structureMessages: string[],
+  format: OutputFormat,
+) =>
+  createErrorResponse(
+    "Le rendu depasse la limite de pages fixee dans cv_data.render.maxPages.",
+    "page_limit_exceeded",
+    {
+      page_count: pageCount,
+      page_limit_exceeded: true,
+      issues,
+      structure_messages: structureMessages,
+      max_pages_source: "cv_data.render.maxPages",
+      next_actions:
+        format === "pdf"
+          ? [
+              "reduire le contenu ou passer render.templateStyle a compact ou ultra-compact",
+              "augmenter ou retirer cv_data.render.maxPages",
+              "generer avec pdf_mode=continuous si vous voulez ignorer la limite pour le PDF",
+            ]
+          : [
+              "reduire le contenu ou passer render.templateStyle a compact ou ultra-compact",
+              "augmenter ou retirer cv_data.render.maxPages",
+              "pour inspecter le HTML malgre tout, retirez temporairement render.maxPages",
+            ],
+    },
+  );
+
 const createSingleCallSizeError = (format: OutputFormat, receivedChars: number) =>
   createErrorResponse(
-    `Le payload cv_data depasse ${MAX_SINGLE_CALL_CV_DATA_CHARS} caracteres pour generate_cv_${format}. Utilisez le workflow chunked MCP.`,
+    `Le payload cv_data depasse ${MAX_SINGLE_CALL_CV_DATA_CHARS} caracteres pour generate_cv_${format}. Utilisez cv_data_path pour un fichier local, ou le workflow chunked MCP en fallback.`,
     "cv_data_too_large_for_single_call",
     {
       max_chars: MAX_SINGLE_CALL_CV_DATA_CHARS,
       received_chars: receivedChars,
       recommended_workflow: [
-        "1) start_cv_chunked_generation",
-        "2) append_cv_generation_chunk (chunk_index 0..total_chunks-1, 5000 chars max par chunk)",
-        `3) auto-finalisation et generation ${format} au dernier chunk`,
+        "1) ecrire le JSON dans un fichier local accessible au serveur MCP",
+        `2) appeler generate_cv_${format} avec cv_data_path`,
+        "3) fallback: start_cv_chunked_generation + append_cv_generation_chunk",
       ],
     },
   );
@@ -243,12 +452,12 @@ const generateHtmlFromCvData = async (
     });
 
     if (validation.pageLimitExceeded) {
-      return createErrorResponse("Le rendu depasse la limite de pages fixee.", "page_limit_exceeded", {
-        page_count: validation.pageCount,
-        page_limit_exceeded: true,
-        issues: validation.issues,
-        structure_messages: validation.structureMessages,
-      });
+      return createPageLimitExceededResponse(
+        validation.pageCount,
+        validation.issues,
+        validation.structureMessages,
+        "html",
+      );
     }
 
     const artifact = await generateCvArtifact(validation.cvData, { format: "html" });
@@ -271,10 +480,7 @@ const generateHtmlFromCvData = async (
       structure_messages: validation.structureMessages,
     });
   } catch (error) {
-    return createErrorResponse(
-      getErrorMessage(error, "Impossible de generer le CV HTML."),
-      getErrorCode(error),
-    );
+    return createStructuredErrorResponse(error, "Impossible de generer le CV HTML.");
   }
 };
 
@@ -291,12 +497,12 @@ const generatePdfFromCvData = async (
     });
 
     if (pdfMode === "paginated" && validation.pageLimitExceeded) {
-      return createErrorResponse("Le rendu depasse la limite de pages fixee.", "page_limit_exceeded", {
-        page_count: validation.pageCount,
-        page_limit_exceeded: true,
-        issues: validation.issues,
-        structure_messages: validation.structureMessages,
-      });
+      return createPageLimitExceededResponse(
+        validation.pageCount,
+        validation.issues,
+        validation.structureMessages,
+        "pdf",
+      );
     }
 
     const artifact = await generateCvArtifact(validation.cvData, {
@@ -331,17 +537,14 @@ const generatePdfFromCvData = async (
       },
     );
   } catch (error) {
-    return createErrorResponse(
-      getErrorMessage(error, "Impossible de generer le CV PDF."),
-      getErrorCode(error),
-    );
+    return createStructuredErrorResponse(error, "Impossible de generer le CV PDF.");
   }
 };
 
 export const createCvMcpServer = (): McpServer => {
   const server = new McpServer({
     name: "cv-generator-mcp",
-    version: "0.1.3",
+    version: "0.1.4",
   });
 
   server.registerTool(
@@ -349,26 +552,32 @@ export const createCvMcpServer = (): McpServer => {
     {
       title: "Generate CV HTML",
       description:
-        "Genere un CV HTML propre a partir d'un CvData JSON (max 5000 caracteres en appel direct). Les options visuelles du template restent dans cv_data.render, y compris templateStyle (classic|compact) et showSkillLevels. Au-dela, utiliser start_cv_chunked_generation + append_cv_generation_chunk.",
+        "Genere un CV HTML propre a partir de cv_data ou cv_data_path. cv_data est limite a 5000 caracteres en appel direct; pour les gros CV locaux, preferer cv_data_path vers un fichier .json accessible au serveur MCP. Pour une photo locale, utiliser header.photoPath plutot que photoUrl; photoPath doit etre dans CV_GENERATOR_ALLOWED_ASSET_DIR ou dans le cwd serveur. Les options visuelles restent dans cv_data.render, y compris templateStyle (classic|compact|ultra-compact) et showSkillLevels.",
       inputSchema: cvDataInputSchema.shape,
       annotations: {
         readOnlyHint: true,
         openWorldHint: false,
       },
     },
-    async ({ cv_data, browser_executable_path }) => {
-      const serializedLength = getSerializedLength(cv_data);
-      if (serializedLength === null) {
-        return createErrorResponse(
-          "Impossible de serialiser cv_data en JSON.",
-          "invalid_cv_data_payload",
-        );
-      }
-      if (serializedLength > MAX_SINGLE_CALL_CV_DATA_CHARS) {
-        return createSingleCallSizeError("html", serializedLength);
+    async ({ cv_data, cv_data_path, browser_executable_path }) => {
+      let cvDataSource: CvDataSource;
+      try {
+        cvDataSource = await resolveCvDataSource(cv_data, cv_data_path);
+      } catch (error) {
+        return createCvDataSourceError(error);
       }
 
-      return generateHtmlFromCvData(cv_data, browser_executable_path);
+      if (
+        cvDataSource.source === "inline" &&
+        cvDataSource.serializedLength > MAX_SINGLE_CALL_CV_DATA_CHARS
+      ) {
+        return createSingleCallSizeError("html", cvDataSource.serializedLength);
+      }
+
+      return withUploadMetadata(await generateHtmlFromCvData(cvDataSource.cvData, browser_executable_path), {
+        cv_data_source: cvDataSource.source,
+        cv_data_path: cvDataSource.source === "file" ? cvDataSource.resolvedPath : undefined,
+      });
     },
   );
 
@@ -377,26 +586,35 @@ export const createCvMcpServer = (): McpServer => {
     {
       title: "Generate CV PDF",
       description:
-        "Genere un CV PDF headless a partir d'un CvData JSON (max 5000 caracteres en appel direct). Les options visuelles du template restent dans cv_data.render, y compris templateStyle (classic|compact) et showSkillLevels. Au-dela, utiliser start_cv_chunked_generation + append_cv_generation_chunk. Le resultat inclut file_path: toujours le relayer explicitement a l'utilisateur.",
+        "Genere un CV PDF headless a partir de cv_data ou cv_data_path. cv_data est limite a 5000 caracteres en appel direct; pour les gros CV locaux, preferer cv_data_path vers un fichier .json accessible au serveur MCP. Pour une photo locale, utiliser header.photoPath plutot que photoUrl; photoPath doit etre dans CV_GENERATOR_ALLOWED_ASSET_DIR ou dans le cwd serveur. Le PDF est ecrit dans CV_GENERATOR_OUTPUT_DIR si defini, sinon dans un dossier temporaire systeme. Les options visuelles restent dans cv_data.render, y compris templateStyle (classic|compact|ultra-compact) et showSkillLevels. Le resultat inclut file_path: toujours le relayer explicitement a l'utilisateur.",
       inputSchema: pdfToolInputSchema.shape,
       annotations: {
         readOnlyHint: false,
         openWorldHint: false,
       },
     },
-    async ({ cv_data, pdf_mode, browser_executable_path }) => {
-      const serializedLength = getSerializedLength(cv_data);
-      if (serializedLength === null) {
-        return createErrorResponse(
-          "Impossible de serialiser cv_data en JSON.",
-          "invalid_cv_data_payload",
-        );
-      }
-      if (serializedLength > MAX_SINGLE_CALL_CV_DATA_CHARS) {
-        return createSingleCallSizeError("pdf", serializedLength);
+    async ({ cv_data, cv_data_path, pdf_mode, browser_executable_path }) => {
+      let cvDataSource: CvDataSource;
+      try {
+        cvDataSource = await resolveCvDataSource(cv_data, cv_data_path);
+      } catch (error) {
+        return createCvDataSourceError(error);
       }
 
-      return generatePdfFromCvData(cv_data, pdf_mode ?? "paginated", browser_executable_path);
+      if (
+        cvDataSource.source === "inline" &&
+        cvDataSource.serializedLength > MAX_SINGLE_CALL_CV_DATA_CHARS
+      ) {
+        return createSingleCallSizeError("pdf", cvDataSource.serializedLength);
+      }
+
+      return withUploadMetadata(
+        await generatePdfFromCvData(cvDataSource.cvData, pdf_mode ?? "paginated", browser_executable_path),
+        {
+          cv_data_source: cvDataSource.source,
+          cv_data_path: cvDataSource.source === "file" ? cvDataSource.resolvedPath : undefined,
+        },
+      );
     },
   );
 
@@ -405,16 +623,17 @@ export const createCvMcpServer = (): McpServer => {
     {
       title: "Validate CV",
       description:
-        "Valide un CvData, mesure sa pagination rendue et retourne normalized_cv_data. Les champs render.templateStyle et render.showSkillLevels sont normalises avec le reste du contrat.",
+        "Valide un CvData fourni via cv_data ou cv_data_path, mesure sa pagination rendue et retourne normalized_cv_data. Pour une photo locale, utiliser header.photoPath plutot que photoUrl; photoPath doit etre dans CV_GENERATOR_ALLOWED_ASSET_DIR ou dans le cwd serveur. Les champs render.templateStyle et render.showSkillLevels sont normalises avec le reste du contrat.",
       inputSchema: cvDataInputSchema.shape,
       annotations: {
         readOnlyHint: true,
         openWorldHint: false,
       },
     },
-    async ({ cv_data, browser_executable_path }) => {
+    async ({ cv_data, cv_data_path, browser_executable_path }) => {
       try {
-        const validation = await validateCvInput(cv_data, {
+        const cvDataSource = await resolveCvDataSource(cv_data, cv_data_path);
+        const validation = await validateCvInput(cvDataSource.cvData, {
           measureRender: true,
           browserExecutablePath: browser_executable_path,
         });
@@ -425,12 +644,14 @@ export const createCvMcpServer = (): McpServer => {
           issues: validation.issues,
           structure_messages: validation.structureMessages,
           normalized_cv_data: validation.cvData,
+          cv_data_source: cvDataSource.source,
+          cv_data_path: cvDataSource.source === "file" ? cvDataSource.resolvedPath : undefined,
         });
       } catch (error) {
-        return createErrorResponse(
-          getErrorMessage(error, "Impossible de valider le CV."),
-          getErrorCode(error),
-        );
+        const errorCode = getErrorCode(error);
+        return errorCode === "internal_error"
+          ? createCvDataSourceError(error)
+          : createErrorResponse(getErrorMessage(error, "Impossible de valider le CV."), errorCode);
       }
     },
   );
@@ -731,7 +952,10 @@ export const createCvMcpServer = (): McpServer => {
         "Le schema est donc duplique ici dans content.text pour compatibilite.",
         "",
         `Limite appels directs generate_cv_*: ${MAX_SINGLE_CALL_CV_DATA_CHARS} caracteres max pour cv_data (JSON stringify).`,
-        "Au-dela: workflow chunked start_cv_chunked_generation -> append_cv_generation_chunk.",
+        "Au-dela: preferer cv_data_path vers un fichier JSON local accessible au serveur MCP.",
+        `Par defaut, cv_data_path est limite au repertoire de travail du serveur MCP; configurez ${ALLOWED_INPUT_DIR_ENV} pour autoriser un autre repertoire.`,
+        `Pour une photo locale, utiliser header.photoPath plutot que photoUrl; configurez ${ALLOWED_ASSET_DIR_ENV} si l'image n'est pas dans le cwd du serveur MCP.`,
+        `Les PDF generes sont ecrits dans ${OUTPUT_DIR_ENV} si defini; sinon dans le dossier temporaire systeme.`,
       ].join("\n");
 
       return createSuccessResponse(schemaText, {
@@ -739,9 +963,24 @@ export const createCvMcpServer = (): McpServer => {
         hints: {
           workflow: [
             "1) get_cv_schema",
-            "2) construire cv_data conforme",
-            "3) validate_cv",
-            "4) generate_cv_pdf ou generate_cv_html",
+            "2) construire cv_data conforme ou ecrire un fichier JSON local",
+            "3) validate_cv avec cv_data ou cv_data_path",
+            "4) generate_cv_pdf ou generate_cv_html avec la meme source",
+          ],
+          file_input_workflow: [
+            `1) configurer ${ALLOWED_INPUT_DIR_ENV} si le fichier n'est pas dans le cwd du serveur MCP`,
+            "2) ecrire cv_data dans un fichier .json local",
+            "3) passer cv_data_path; le chemin doit etre valide depuis le process serveur MCP",
+          ],
+          local_photo_workflow: [
+            `1) configurer ${ALLOWED_ASSET_DIR_ENV} si la photo n'est pas dans le cwd du serveur MCP`,
+            "2) renseigner header.photoPath avec le chemin local de l'image, valide depuis le process serveur MCP",
+            "3) laisser header.photoUrl vide sauf besoin d'une URL/data URL deja encodee",
+            "4) garder header.showPhoto=true",
+          ],
+          output_workflow: [
+            `1) configurer ${OUTPUT_DIR_ENV} pour choisir le dossier de sortie des PDF`,
+            "2) lire file_path dans la reponse generate_cv_pdf",
           ],
           compact_cv_data_example: compactCvDataExample,
           chunked_workflow: [

@@ -14,13 +14,14 @@ export const CV_THEME_VALUES = [
 export const SIDEBAR_POSITION_VALUES = ["left", "right"] as const;
 export const CARD_ICON_VALUES = ["certification", "formation", "generic"] as const;
 export const SKILL_GROUP_TYPE_VALUES = ["bars", "tags"] as const;
-export const TEMPLATE_STYLE_VALUES = ["classic", "compact"] as const;
+export const TEMPLATE_STYLE_VALUES = ["classic", "compact", "ultra-compact"] as const;
 
 const cvDataMinimalExample = {
   header: {
     name: "Thomas Dubois",
     badgeText: "T.D",
     photoUrl: "",
+    photoPath: "",
     showPhoto: false,
     photoZoom: 100,
     headline: "ARCHITECTE CLOUD SENIOR | AWS | AZURE | KUBERNETES",
@@ -158,7 +159,13 @@ export const cvDataJsonSchema = {
         badgeText: { type: "string", description: "Initiales/badge (ex: T.D)." },
         photoUrl: {
           type: "string",
-          description: "URL ou data URL de photo affichee a la place du badge si showPhoto=true.",
+          description:
+            "URL ou data URL de photo affichee a la place du badge si showPhoto=true. Pour les fichiers locaux via MCP/CLI, preferer photoPath.",
+        },
+        photoPath: {
+          type: "string",
+          description:
+            "Chemin local optionnel vers une image de photo. Recommande pour MCP/CLI. Le fichier doit etre lisible par le process serveur et situe dans CV_GENERATOR_ALLOWED_ASSET_DIR, ou dans le cwd serveur si cette variable n'est pas definie. Si photoPath est fourni, il est converti en data URL et prend le dessus sur photoUrl au rendu.",
         },
         showPhoto: { type: "boolean", description: "Affiche la photo a la place du badge." },
         photoZoom: {
@@ -372,7 +379,7 @@ export const cvDataJsonSchema = {
           type: "string",
           enum: [...TEMPLATE_STYLE_VALUES],
           description:
-            "Variante visuelle du template. classic conserve le rendu actuel, compact densifie la mise en page et affiche les competences a barres dans un radar.",
+            "Variante visuelle du template. classic conserve le rendu actuel, compact densifie la mise en page, ultra-compact utilise une mise en page une colonne tres dense.",
         },
         showSkillLevels: {
           type: "boolean",

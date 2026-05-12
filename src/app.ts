@@ -109,6 +109,31 @@ const renderEditableText = (
   >${escapeHtml(value)}</div>
 `;
 
+const renderOptionalEditableText = (
+  value: string,
+  bind: string,
+  interactive: boolean,
+  maxLines: number,
+  label: string,
+  className: string,
+  multiline = false,
+): string => {
+  if (value.trim().length === 0) {
+    return "";
+  }
+
+  return `
+    <div class="optional-editable-field">
+      ${renderEditableText(value, bind, interactive, maxLines, label, className, multiline)}
+      ${
+        interactive
+          ? `<button type="button" class="optional-field-clear" data-action="clear-field" data-bind="${bind}" title="Supprimer ce champ" aria-label="Supprimer ce champ">×</button>`
+          : ""
+      }
+    </div>
+  `;
+};
+
 const renderBullet = (
   item: TextItem,
   path: string,
@@ -354,27 +379,23 @@ const renderExperience = (
           ${renderEditableText(experience.period, `${experiencePath}.period`, interactive, 1, copy.labelPeriod, "experience-period")}
           ${renderToolbarButtons("experiences", index, interactive)}
         </div>
-        ${experience.subtitle.trim().length > 0
-          ? renderEditableText(
-              experience.subtitle,
-              `${experiencePath}.subtitle`,
-              interactive,
-              2,
-              copy.labelExperienceSubtitle,
-              "experience-subtitle",
-            )
-          : ""}
-        ${interactive || experience.summary.trim().length > 0
-          ? renderEditableText(
-              experience.summary,
-              `${experiencePath}.summary`,
-              interactive,
-              4,
-              "Résumé d'expérience",
-              "experience-summary",
-              true,
-            )
-          : ""}
+        ${renderOptionalEditableText(
+          experience.subtitle,
+          `${experiencePath}.subtitle`,
+          interactive,
+          2,
+          copy.labelExperienceSubtitle,
+          "experience-subtitle",
+        )}
+        ${renderOptionalEditableText(
+          experience.summary,
+          `${experiencePath}.summary`,
+          interactive,
+          4,
+          "Résumé d'expérience",
+          "experience-summary",
+          true,
+        )}
         <ul class="bullet-list">
           ${experience.bullets
             .map((bullet, bulletIndex) => renderBullet(bullet, bulletsPath, bulletIndex, interactive, copy.labelBulletPoint))
@@ -395,6 +416,16 @@ const renderExperience = (
             data-factory="project"
             ${canAddFactory(state, projectsPath, "project") ? "" : "disabled"}
           >+ Projet</button>
+          ${
+            interactive && experience.subtitle.trim().length === 0
+              ? `<button type="button" data-action="set-field" data-bind="${experiencePath}.subtitle" data-value="${escapeHtml(copy.labelExperienceSubtitle)}">+ Sous-titre</button>`
+              : ""
+          }
+          ${
+            interactive && experience.summary.trim().length === 0
+              ? `<button type="button" data-action="set-field" data-bind="${experiencePath}.summary" data-value="Résumé à préciser">+ Résumé</button>`
+              : ""
+          }
         </div>
         ${
           experience.projects.length > 0
@@ -519,11 +550,12 @@ export const renderApp = (state: CvData, options: RenderOptions): string => {
           </label>
           <label class="toolbar-field">
             <span>Style</span>
-            <select data-action="set-template-style">
-              <option value="classic" ${state.render.templateStyle === "classic" ? "selected" : ""}>Classique</option>
-              <option value="compact" ${state.render.templateStyle === "compact" ? "selected" : ""}>Compact</option>
-            </select>
-          </label>
+              <select data-action="set-template-style">
+                <option value="classic" ${state.render.templateStyle === "classic" ? "selected" : ""}>Classique</option>
+                <option value="compact" ${state.render.templateStyle === "compact" ? "selected" : ""}>Compact</option>
+                <option value="ultra-compact" ${state.render.templateStyle === "ultra-compact" ? "selected" : ""}>Ultra compact</option>
+              </select>
+            </label>
           <label class="toolbar-field toolbar-field-switch">
             <span>% exacts</span>
             <span class="toolbar-switch">
@@ -561,6 +593,143 @@ interface RenderCvSheetOptions {
   qrCodeMarkup?: string | null;
 }
 
+const renderUltraCompactSheet = (
+  state: CvData,
+  options: RenderCvSheetOptions,
+  classes: { themeClass: string; templateStyleClass: string },
+): string => {
+  const { interactive, activeCardIconMenu = null } = options;
+  const copy = getCvLanguageCopy(state.render.language);
+  const canAddSkillGroups = canAddFactory(state, "skillGroups", "skill-bar-group");
+  const contactItems = [
+    state.header.phone,
+    state.header.email,
+    state.header.location,
+    state.header.linkedin,
+    state.header.github,
+  ].filter((value) => value.trim().length > 0);
+
+  return `
+    <div class="cv-sheet ${classes.themeClass} ${classes.templateStyleClass} ultra-single-column">
+      <main class="main-column ultra-main">
+        <header class="hero ultra-hero">
+          ${
+            state.header.showPhoto && state.header.photoUrl.trim()
+              ? `
+                <div class="cv-photo ultra-photo">
+                  <img
+                    src="${escapeHtml(state.header.photoUrl).replace(/"/g, "&quot;")}"
+                    alt="${escapeHtml(state.header.name)}"
+                    style="width: ${state.header.photoZoom}%; height: ${state.header.photoZoom}%;"
+                  />
+                </div>
+              `
+              : ""
+          }
+          ${renderEditableText(state.header.name, "header.name", interactive, 2, copy.labelName, "hero-name")}
+          ${renderEditableText(state.header.headline, "header.headline", interactive, 3, copy.labelHeadline, "hero-headline")}
+          <div class="ultra-contact-line">
+            ${
+              contactItems.length > 0
+                ? contactItems.map((value) => `<span>${escapeHtml(value)}</span>`).join("<span>•</span>")
+                : ""
+            }
+          </div>
+        </header>
+
+        <section class="profile-box ultra-section">
+          <div class="ultra-section-title">${renderEditableText(state.profileLabel, "profileLabel", interactive, 1, copy.defaults.profileLabel, "inline-edit")}</div>
+          ${renderEditableText(state.profile, "profile", interactive, LIMITS.profileLines, copy.labelProfileText, "profile-text")}
+        </section>
+
+        <section class="ultra-section ultra-skills">
+          ${renderSectionHeader(
+            copy.sectionSkills,
+            interactive,
+            undefined,
+            undefined,
+            false,
+            canAddSkillGroups
+              ? `
+                  <button type="button" data-action="add-item" data-path="skillGroups" data-factory="skill-bar-group">+ Compétences</button>
+                  <button type="button" data-action="add-item" data-path="skillGroups" data-factory="skill-tag-group">+ Tags</button>
+                `
+              : `<span class="group-limit-hint ${controlClass(interactive)}">3 blocs max</span>`,
+          )}
+          <div class="ultra-skill-grid">
+            ${state.skillGroups
+              .map((group, index) =>
+                renderSkillGroup(
+                  group,
+                  index,
+                  state,
+                  interactive,
+                  state.render.templateStyle,
+                  state.render.showSkillLevels,
+                ),
+              )
+              .join("")}
+          </div>
+        </section>
+
+        <section class="experience-section ultra-section">
+          ${renderSectionHeader(copy.sectionExperienceAndProjects, interactive, "experiences", "experience", canAddFactory(state, "experiences", "experience"))}
+          <div class="experience-timeline">
+            ${state.experiences.map((experience, index) => renderExperience(experience, index, state, interactive, copy)).join("")}
+          </div>
+        </section>
+
+        <section class="ultra-section ultra-bottom-grid">
+          <div>
+            ${renderSectionHeader(copy.sectionLanguages, interactive, "languages", "language", canAddFactory(state, "languages", "language"))}
+            <div class="stacked-list">${state.languages.map((item, index) => renderLanguageCard(item, "languages", index, interactive, copy)).join("")}</div>
+          </div>
+          <div>
+            ${renderSectionHeader(copy.sectionCertifications, interactive, "certifications", "certification", canAddFactory(state, "certifications", "certification"))}
+            <div class="stacked-list">
+              ${state.certifications
+                .map((item, index) =>
+                  renderSidebarCard(
+                    item,
+                    "certifications",
+                    index,
+                    interactive,
+                    LIMITS.certificationTitleLines,
+                    copy.sectionCertifications,
+                    copy.labelSecondary,
+                    copy.labelMetadata,
+                    activeCardIconMenu,
+                  ),
+                )
+                .join("")}
+            </div>
+          </div>
+          <div>
+            ${renderSectionHeader(copy.sectionFormations, interactive, "formations", "formation", true)}
+            <div class="stacked-list">
+              ${state.formations
+                .map((item, index) =>
+                  renderSidebarCard(
+                    item,
+                    "formations",
+                    index,
+                    interactive,
+                    2,
+                    copy.sectionFormations,
+                    copy.labelSecondary,
+                    copy.labelMetadata,
+                    activeCardIconMenu,
+                  ),
+                )
+                .join("")}
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  `;
+};
+
 export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): string => {
   const { interactive, activeCardIconMenu = null, qrCodeMarkup = null } = options;
   const themeClass = `theme-${state.render.theme}`;
@@ -573,6 +742,10 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
       ? "Remettre la colonne à gauche"
       : "Déplacer la colonne à droite";
   const canAddSkillGroups = canAddFactory(state, "skillGroups", "skill-bar-group");
+
+  if (state.render.templateStyle === "ultra-compact") {
+    return renderUltraCompactSheet(state, options, { themeClass, templateStyleClass });
+  }
 
   return `
       <div class="cv-sheet ${themeClass} ${templateStyleClass} ${sidebarClass}">

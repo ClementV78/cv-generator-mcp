@@ -243,6 +243,71 @@ test("MCP server enforces 5000-char direct limit and supports chunked PDF genera
   }
 });
 
+test("MCP server generates from cv_data_path inside the allowed input directory", async () => {
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [tsxCliPath, mcpServerPath],
+    cwd: projectRoot,
+    stderr: "pipe",
+    env: {
+      ...process.env,
+      CV_GENERATOR_ALLOWED_INPUT_DIR: __dirname,
+    },
+  });
+
+  const client = new Client({
+    name: "cv-generator-test-client-file-input",
+    version: "0.1.0",
+  });
+
+  try {
+    await client.connect(transport);
+
+    const validateResult = await client.callTool({
+      name: "validate_cv",
+      arguments: {
+        cv_data_path: minimalFixturePath,
+      },
+    });
+
+    assert.equal((validateResult as { isError?: boolean }).isError ?? false, false);
+    const validatePayload = validateResult.structuredContent as {
+      success: boolean;
+      cv_data_source: string;
+      cv_data_path: string;
+    };
+    assert.equal(validatePayload.success, true);
+    assert.equal(validatePayload.cv_data_source, "file");
+    assert.equal(validatePayload.cv_data_path, minimalFixturePath);
+
+    const pdfResult = await client.callTool({
+      name: "generate_cv_pdf",
+      arguments: {
+        cv_data_path: minimalFixturePath,
+        pdf_mode: "continuous",
+      },
+    });
+
+    assert.equal((pdfResult as { isError?: boolean }).isError ?? false, false);
+    const pdfPayload = pdfResult.structuredContent as {
+      success: boolean;
+      format: string;
+      pdf_mode: string;
+      file_path: string;
+      cv_data_source: string;
+      cv_data_path: string;
+    };
+    assert.equal(pdfPayload.success, true);
+    assert.equal(pdfPayload.format, "pdf");
+    assert.equal(pdfPayload.pdf_mode, "continuous");
+    assert.equal(pdfPayload.cv_data_source, "file");
+    assert.equal(pdfPayload.cv_data_path, minimalFixturePath);
+    assert.match(pdfPayload.file_path, /cv-template-.*\.pdf$/);
+  } finally {
+    await client.close();
+  }
+});
+
 test("MCP chunk append can auto-resolve upload_id when exactly one session is active", async () => {
   const transport = new StdioClientTransport({
     command: process.execPath,

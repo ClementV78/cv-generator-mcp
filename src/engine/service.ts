@@ -4,6 +4,7 @@ import { renderCvHtmlDocumentNode } from "./renderHtmlNode";
 import { renderCvPdf, type RenderPdfOptions } from "./renderPdf";
 import { getCvDataJsonSchema, type CvDataJsonSchema } from "./schema";
 import { validateCv, type ValidateCvOptions } from "./validateNode";
+import { resolveCvAssetPaths } from "./assets";
 
 export type CvArtifactFormat = "html" | "json" | "pdf";
 
@@ -40,8 +41,8 @@ export interface ValidateCvServiceResult extends ValidationResult {
   cvData: CvData;
 }
 
-export const prepareCvData = (input: unknown): PrepareCvResult => ({
-  cvData: normalizeCvData(input),
+export const prepareCvData = async (input: unknown): Promise<PrepareCvResult> => ({
+  cvData: await resolveCvAssetPaths(normalizeCvData(input)),
 });
 
 export const exportCvJson = (data: CvData): string => JSON.stringify(deepClone(data), null, 2);
@@ -52,7 +53,7 @@ export const validateCvInput = async (
   input: unknown,
   options: ValidateCvServiceOptions = {},
 ): Promise<ValidateCvServiceResult> => {
-  const { cvData } = prepareCvData(input);
+  const { cvData } = await prepareCvData(input);
   const validation = await validateCv(cvData, options);
 
   return {
@@ -65,7 +66,7 @@ export const generateCvArtifact = async (
   input: unknown,
   options: GenerateCvArtifactOptions,
 ): Promise<GenerateCvArtifactResult> => {
-  const { cvData } = prepareCvData(input);
+  const { cvData } = await prepareCvData(input);
 
   if (options.format === "json") {
     return {

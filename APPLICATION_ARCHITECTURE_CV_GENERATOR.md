@@ -138,7 +138,7 @@ It supports:
 - inline content editing
 - CV language selection (`english | french | spanish`)
 - theme selection
-- template style selection (`classic | compact`)
+- template style selection (`classic | compact | ultra-compact`)
 - exact skill level toggle (`showSkillLevels`)
 - sidebar position selection
 - JSON and HTML import / export
@@ -606,6 +606,9 @@ Normalizes and validates a `CvData`, then returns:
 - `page_count`
 - `page_limit_exceeded`
 
+Input can be provided either inline as `cv_data` or as `cv_data_path`.
+`cv_data_path` points to a local JSON file readable by the MCP server process.
+
 ### `generate_cv_html`
 
 Generates the final HTML output from a valid `CvData`.
@@ -613,7 +616,7 @@ Generates the final HTML output from a valid `CvData`.
 Constraint:
 
 - direct call accepted only if `JSON.stringify(cv_data).length <= 5000`
-- otherwise error `cv_data_too_large_for_single_call` and fallback to the chunked workflow
+- otherwise error `cv_data_too_large_for_single_call`; prefer `cv_data_path` for local large payloads, with the chunked workflow as fallback
 
 ### `generate_cv_pdf`
 
@@ -627,7 +630,54 @@ The tool supports 2 modes:
 Constraint:
 
 - direct call accepted only if `JSON.stringify(cv_data).length <= 5000`
-- otherwise error `cv_data_too_large_for_single_call` and fallback to the chunked workflow
+- otherwise error `cv_data_too_large_for_single_call`; prefer `cv_data_path` for local large payloads, with the chunked workflow as fallback
+
+### Local file input
+
+The MCP server also accepts `cv_data_path` on:
+
+- `validate_cv`
+- `generate_cv_html`
+- `generate_cv_pdf`
+
+Rules:
+
+- callers must provide either `cv_data` or `cv_data_path`, not both
+- `cv_data_path` is interpreted by the MCP server process, not by the model environment
+- Windows paths are expected when the MCP server runs on Windows
+- by default, files must resolve inside the server current working directory
+- `CV_GENERATOR_ALLOWED_INPUT_DIR` can authorize a dedicated input directory
+- the server resolves real paths before checking containment, so symlink escapes are rejected
+- only `.json` files up to `1000000` bytes are accepted
+
+This keeps large local CV generation to one MCP call while preserving the same engine path as inline `cv_data`.
+
+### Local asset input
+
+`CvData.header.photoPath` is the recommended way to reference a local profile photo from MCP / CLI clients.
+
+Rules:
+
+- `photoPath` is interpreted by the Node engine process, not by the model environment
+- Windows paths are expected when the MCP server runs on Windows
+- by default, files must resolve inside the server current working directory
+- `CV_GENERATOR_ALLOWED_ASSET_DIR` can authorize a dedicated asset directory
+- the engine resolves real paths before checking containment, so symlink escapes are rejected
+- accepted extensions: `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`
+- max file size: `5000000` bytes
+- when present, `photoPath` is converted to a data URL and takes precedence over `photoUrl` for rendering
+
+### Output directory
+
+Generated MCP PDF artifacts are written to disk and returned as `file_path`.
+
+Rules:
+
+- `CV_GENERATOR_OUTPUT_DIR` can select the output directory for generated artifacts
+- if absent, the engine uses the system temp directory
+- the directory is created automatically
+- CLI `--output <file>` remains an explicit override for CLI calls
+- temporary render workspaces remain in the system temp area and are not written into the public output directory
 
 ### `start_cv_chunked_generation`
 
@@ -668,6 +718,13 @@ sequenceDiagram
     alt payload <= 5000 chars
       Client->>Server: callTool(generate_cv_pdf, cv_data)
       Server->>Engine: validateCvInput(payload.cv_data)
+      Server->>Engine: generateCvArtifact(format=pdf)
+      Engine-->>Server: PDF + metadata
+      Server-->>Client: structured response
+    else local file input
+      Client->>Server: callTool(generate_cv_pdf, cv_data_path)
+      Server->>Server: read + parse allowed local JSON file
+      Server->>Engine: validateCvInput(parsed_cv_data)
       Server->>Engine: generateCvArtifact(format=pdf)
       Engine-->>Server: PDF + metadata
       Server-->>Client: structured response

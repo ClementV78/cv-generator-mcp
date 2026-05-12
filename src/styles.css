@@ -766,7 +766,7 @@ input {
 }
 
 .cv-sheet.template-compact {
-  grid-template-columns: 296px 1fr;
+  grid-template-columns: 286px 1fr;
 }
 
 .cv-sheet.sidebar-right {
@@ -774,7 +774,13 @@ input {
 }
 
 .cv-sheet.template-compact.sidebar-right {
-  grid-template-columns: 1fr 296px;
+  grid-template-columns: 1fr 286px;
+}
+
+.cv-sheet.template-ultra-compact {
+  display: block;
+  width: 980px;
+  padding: 0;
 }
 
 .cv-sheet.sidebar-right .main-column {
@@ -841,7 +847,11 @@ input {
 }
 
 .template-compact .main-column {
-  padding: 24px 22px 28px;
+  padding: 24px 18px 28px;
+}
+
+.template-ultra-compact .main-column {
+  padding: 28px 38px 34px;
 }
 
 .cv-badge {
@@ -1234,6 +1244,164 @@ input {
   line-height: 1.2;
 }
 
+.template-ultra-compact {
+  --ultra-rule: color-mix(in srgb, var(--main-heading-color) 24%, transparent);
+}
+
+.template-ultra-compact .ultra-hero {
+  position: relative;
+  min-height: 64px;
+  padding-left: 78px;
+  padding-right: 78px;
+  text-align: center;
+  margin-bottom: 11px;
+}
+
+.template-ultra-compact .ultra-photo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  width: 64px;
+  height: 64px;
+}
+
+.template-ultra-compact .hero-name {
+  color: var(--navy);
+  font-size: 1.92rem;
+  line-height: 1;
+}
+
+.template-ultra-compact .hero-headline {
+  margin-top: 4px;
+  color: var(--ui-accent);
+  font-size: 0.9rem;
+  line-height: 1.1;
+}
+
+.ultra-contact-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 5px;
+  color: var(--main-text-color);
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+
+.template-ultra-compact .ultra-section {
+  margin-top: 10px;
+}
+
+.template-ultra-compact .section-heading {
+  justify-content: center;
+  gap: 10px;
+  margin: 0 0 5px;
+  border-bottom: 1px solid var(--ultra-rule);
+}
+
+.template-ultra-compact .section-heading h2,
+.template-ultra-compact .section-heading h3,
+.template-ultra-compact .editable-text.section-title-edit,
+.template-ultra-compact .ultra-section-title {
+  color: color-mix(in srgb, var(--main-heading-color) 44%, white);
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.template-ultra-compact .profile-box {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0.75rem;
+  line-height: 1.18;
+}
+
+.template-ultra-compact .profile-text,
+.template-ultra-compact .inline-edit {
+  display: inline;
+}
+
+.template-ultra-compact .ultra-skill-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 18px;
+}
+
+.template-ultra-compact .skill-section {
+  margin: 0;
+}
+
+.template-ultra-compact .skill-section > .section-heading {
+  justify-content: flex-start;
+  border-bottom: 0;
+  margin-bottom: 3px;
+}
+
+.template-ultra-compact .skill-section > .section-heading .editable-text {
+  color: var(--main-heading-color);
+  font-size: 0.74rem;
+  text-align: left;
+}
+
+.template-ultra-compact .skill-group-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 10px;
+}
+
+.template-ultra-compact .skill-row {
+  display: grid;
+  grid-template-columns: minmax(82px, max-content) 46px;
+  align-items: center;
+  justify-content: start;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.template-ultra-compact .skill-row-main {
+  display: block;
+  margin: 0;
+  color: var(--main-text-color);
+  font-size: 0.72rem;
+  line-height: 1.1;
+}
+
+.template-ultra-compact .skill-level-value {
+  display: none;
+}
+
+.template-ultra-compact .skill-track {
+  height: 4px;
+  gap: 1px;
+}
+
+.template-ultra-compact .tag-cloud {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 4px 5px;
+}
+
+.template-ultra-compact .tag-pill {
+  justify-content: center;
+  min-width: 0;
+  padding: 2px 5px;
+  border-radius: 999px;
+  color: var(--main-text-color);
+  background: color-mix(in srgb, var(--ui-accent) 8%, white);
+  font-size: 0.68rem;
+  line-height: 1.1;
+}
+
 .highlight-card,
 .language-card {
   background: var(--sidebar-card-bg-soft);
@@ -1478,7 +1646,11 @@ input {
 }
 
 .template-compact .experience-timeline {
-  padding-left: 16px;
+  padding-left: 11px;
+}
+
+.template-compact .experience-timeline::before {
+  left: 5px;
 }
 
 .experience-timeline::before {
@@ -1513,7 +1685,7 @@ input {
 }
 
 .template-compact .experience-dot {
-  left: -18px;
+  left: -13px;
   top: 12px;
   width: 12px;
   height: 12px;
@@ -1527,7 +1699,7 @@ input {
 
 .template-compact .experience-card {
   border-radius: 12px;
-  padding: 10px 11px;
+  padding: 10px 9px;
   font-size: 0.88rem;
   line-height: 1.32;
 }
@@ -1610,6 +1782,40 @@ input {
   font-size: 0.79rem;
 }
 
+.optional-editable-field {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.optional-editable-field:has(.experience-summary) {
+  width: 100%;
+}
+
+.optional-editable-field .experience-summary {
+  width: 100%;
+}
+
+.optional-field-clear {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #9f1239;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.16);
+}
+
+.optional-field-clear:hover {
+  background: #ffe4e6;
+}
+
 .experience-summary {
   margin-top: 8px;
   color: var(--main-text-color);
@@ -1642,8 +1848,8 @@ input {
 }
 
 .template-compact .bullet-item {
-  grid-template-columns: 9px minmax(0, 1fr) auto;
-  gap: 8px;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
+  gap: 6px;
   margin-bottom: 5px;
   font-size: 0.86rem;
 }
@@ -1705,6 +1911,178 @@ input {
 
 .template-compact .main-education {
   margin-top: 16px;
+}
+
+.template-ultra-compact .experience-section {
+  margin-top: 16px;
+}
+
+.template-ultra-compact .experience-timeline {
+  padding-left: 0;
+}
+
+.template-ultra-compact .experience-timeline::before,
+.template-ultra-compact .experience-dot {
+  display: none;
+}
+
+.template-ultra-compact .experience-item {
+  margin-bottom: 10px;
+}
+
+.template-ultra-compact .experience-card {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.75rem;
+  line-height: 1.18;
+}
+
+.template-ultra-compact .experience-header {
+  display: block;
+}
+
+.template-ultra-compact .experience-role {
+  color: var(--main-heading-color);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.template-ultra-compact .experience-company {
+  display: block;
+  margin-left: 0;
+  color: var(--main-text-color);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.template-ultra-compact .experience-period,
+.template-ultra-compact .project-period {
+  display: block;
+  width: fit-content;
+  margin-top: 1px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--main-text-color);
+  font-size: 0.7rem;
+}
+
+.template-ultra-compact .experience-subtitle,
+.template-ultra-compact .project-title {
+  display: block;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--main-text-color);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.template-ultra-compact .experience-summary {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  line-height: 1.14;
+}
+
+.template-ultra-compact .bullet-list {
+  margin-top: 4px;
+}
+
+.template-ultra-compact .bullet-item {
+  grid-template-columns: 6px minmax(0, 1fr) auto;
+  gap: 5px;
+  margin-bottom: 2px;
+  font-size: 0.71rem;
+  line-height: 1.14;
+}
+
+.template-ultra-compact .bullet-item::before {
+  width: 3px;
+  height: 3px;
+  margin-top: 0.45em;
+  background: var(--main-text-color);
+  box-shadow: none;
+}
+
+.template-ultra-compact .tech-box,
+.template-ultra-compact .education-summary {
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--main-text-color);
+  font-size: 0.7rem;
+  line-height: 1.14;
+}
+
+.template-ultra-compact .project-list {
+  margin-top: 4px;
+  gap: 4px;
+}
+
+.template-ultra-compact .project-card {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.template-ultra-compact .ultra-bottom-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.template-ultra-compact .stacked-list {
+  gap: 5px;
+}
+
+.template-ultra-compact .sidebar-card,
+.template-ultra-compact .language-card,
+.template-ultra-compact .highlight-card {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--main-text-color);
+  font-size: 0.7rem;
+  line-height: 1.14;
+}
+
+.mode-edit .template-ultra-compact .sidebar-card {
+  padding-right: 0;
+}
+
+.template-ultra-compact .card-content,
+.template-ultra-compact .language-card .editable-text,
+.template-ultra-compact .sidebar-card .editable-text {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.template-ultra-compact .card-icon,
+.template-ultra-compact .card-icon-picker {
+  display: none;
+}
+
+.template-ultra-compact .card-title,
+.template-ultra-compact .language-card > .editable-text:first-child {
+  color: var(--main-heading-color);
+  font-weight: 900;
+}
+
+.template-ultra-compact .card-meta {
+  color: var(--main-text-color);
+  font-size: 0.68rem;
 }
 
 .main-education-placeholder {
@@ -1824,13 +2202,19 @@ input {
 
   .sidebar {
     position: static;
-    width: 59mm;
-    flex: 0 0 59mm;
+    width: 57mm;
+    flex: 0 0 57mm;
     min-height: 100%;
     height: auto;
     padding: 7mm 4.5mm 7mm;
     overflow: visible;
     direction: ltr;
+  }
+
+  .cv-sheet.template-compact .sidebar {
+    width: 52mm;
+    flex-basis: 52mm;
+    padding: 6.4mm 3.8mm 6.6mm;
   }
 
   .sidebar-top-actions {
@@ -1844,7 +2228,19 @@ input {
   }
 
   .cv-sheet.template-compact .main-column {
-    padding: 5.4mm 5.2mm 5.8mm;
+    padding: 5.1mm 3.8mm 5.6mm;
+  }
+
+  .cv-sheet.template-compact .experience-timeline {
+    padding-left: 9px;
+  }
+
+  .cv-sheet.template-compact .experience-timeline::before {
+    left: 4px;
+  }
+
+  .cv-sheet.template-compact .experience-dot {
+    left: -12px;
   }
 
   .hero-name {
@@ -1985,9 +2381,9 @@ input {
   }
 
   .cv-sheet.template-compact .experience-card {
-    padding: 9px 10px;
-    font-size: 0.84rem;
-    line-height: 1.28;
+    padding: 9px 8px;
+    font-size: 0.8rem;
+    line-height: 1.22;
   }
 
   .project-title {
@@ -2018,6 +2414,11 @@ input {
     line-height: 1.18;
   }
 
+  .cv-sheet.template-compact .experience-summary {
+    font-size: 0.7rem;
+    line-height: 1.14;
+  }
+
   .experience-period,
   .project-period {
     margin-top: 5px;
@@ -2042,9 +2443,10 @@ input {
   }
 
   .cv-sheet.template-compact .bullet-item {
-    gap: 7px;
-    margin-bottom: 4px;
-    font-size: 0.82rem;
+    grid-template-columns: 7px minmax(0, 1fr) auto;
+    gap: 5px;
+    margin-bottom: 3px;
+    font-size: 0.79rem;
   }
 
   .project-card {
@@ -2064,9 +2466,10 @@ input {
 
   .cv-sheet.template-compact .tech-box,
   .cv-sheet.template-compact .education-summary {
-    margin-top: 7px;
-    padding: 7px 8px;
-    font-size: 0.76rem;
+    margin-top: 6px;
+    padding: 6px 7px;
+    font-size: 0.72rem;
+    line-height: 1.18;
     line-height: 1.26;
   }
 
@@ -2136,6 +2539,97 @@ input {
   .tag-pill {
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+
+  .cv-sheet.template-ultra-compact {
+    display: block;
+    width: 210mm;
+    font-size: 0.78rem;
+    line-height: 1.16;
+  }
+
+  .cv-sheet.template-ultra-compact .main-column {
+    padding: 5.5mm 9mm 7mm;
+  }
+
+  .cv-sheet.template-ultra-compact .hero-name {
+    font-size: 20pt;
+  }
+
+  .cv-sheet.template-ultra-compact .ultra-hero {
+    min-height: 14mm;
+    padding-left: 18mm;
+    padding-right: 18mm;
+    margin-bottom: 3mm;
+  }
+
+  .cv-sheet.template-ultra-compact .ultra-photo {
+    width: 14mm;
+    height: 14mm;
+  }
+
+  .cv-sheet.template-ultra-compact .hero-headline {
+    margin-top: 3px;
+    font-size: 9.2pt;
+  }
+
+  .cv-sheet.template-ultra-compact .ultra-contact-line {
+    margin-top: 5px;
+    font-size: 7.5pt;
+  }
+
+  .cv-sheet.template-ultra-compact .section-heading h2,
+  .cv-sheet.template-ultra-compact .section-heading h3,
+  .cv-sheet.template-ultra-compact .editable-text.section-title-edit,
+  .cv-sheet.template-ultra-compact .ultra-section-title {
+    font-size: 8.5pt;
+  }
+
+  .cv-sheet.template-ultra-compact .profile-box {
+    font-size: 7.7pt;
+    line-height: 1.16;
+  }
+
+  .cv-sheet.template-ultra-compact .ultra-skill-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.18fr);
+    gap: 5px 14px;
+  }
+
+  .cv-sheet.template-ultra-compact .tag-cloud {
+    grid-template-columns: repeat(auto-fit, minmax(18mm, 1fr));
+    gap: 2px 3px;
+  }
+
+  .cv-sheet.template-ultra-compact .tag-pill {
+    min-height: 4mm;
+    padding: 1px 3px;
+    font-size: 6.1pt;
+    line-height: 1;
+  }
+
+  .cv-sheet.template-ultra-compact .experience-card {
+    font-size: 7.2pt;
+    line-height: 1.12;
+  }
+
+  .cv-sheet.template-ultra-compact .experience-summary,
+  .cv-sheet.template-ultra-compact .tech-box,
+  .cv-sheet.template-ultra-compact .education-summary {
+    font-size: 6.8pt;
+    line-height: 1.1;
+  }
+
+  .cv-sheet.template-ultra-compact .bullet-item {
+    margin-bottom: 1.5px;
+    font-size: 6.9pt;
+    line-height: 1.1;
+  }
+
+  .cv-sheet.template-ultra-compact .sidebar-card,
+  .cv-sheet.template-ultra-compact .language-card,
+  .cv-sheet.template-ultra-compact .highlight-card {
+    font-size: 6.8pt;
+    line-height: 1.1;
   }
 
   .editable-text {

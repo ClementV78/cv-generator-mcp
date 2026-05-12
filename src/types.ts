@@ -13,13 +13,14 @@ export type CvTheme =
 export type SidebarPosition = "left" | "right";
 export const CV_LANGUAGE_VALUES = ["english", "french", "spanish"] as const;
 export type CvLanguage = (typeof CV_LANGUAGE_VALUES)[number];
-export const TEMPLATE_STYLE_VALUES = ["classic", "compact"] as const;
+export const TEMPLATE_STYLE_VALUES = ["classic", "compact", "ultra-compact"] as const;
 export type TemplateStyle = (typeof TEMPLATE_STYLE_VALUES)[number];
 
 export interface HeaderData {
   name: string;
   badgeText: string;
   photoUrl: string;
+  photoPath: string;
   showPhoto: boolean;
   photoZoom: number;
   headline: string;

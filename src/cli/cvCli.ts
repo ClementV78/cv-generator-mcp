@@ -1,9 +1,8 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { generateCvArtifact, getCvSchema, validateCvInput } from "../engine/service";
-import { writeBinaryArtifactToTempFile } from "../engine/output";
+import { writeBinaryArtifactToTempFile, writeTextArtifactToOutputFile } from "../engine/output";
 import type { PdfMode } from "../engine/renderPdf";
 
 type CommandName = "get-cv-schema" | "validate-cv" | "generate-cv-html" | "generate-cv-pdf";
@@ -13,7 +12,17 @@ interface ParsedArgs {
   options: Map<string, string | boolean>;
 }
 
-const TEMP_OUTPUT_DIR = path.join(os.tmpdir(), "cv-generator");
+class CliError extends Error {
+  readonly code: string;
+  readonly details: Record<string, unknown>;
+
+  constructor(code: string, message: string, details: Record<string, unknown> = {}) {
+    super(message);
+    this.name = "CliError";
+    this.code = code;
+    this.details = details;
+  }
+}
 
 process.stdout.on("error", (error: NodeJS.ErrnoException) => {
   if (error.code === "EPIPE") {
@@ -49,11 +58,12 @@ Commandes:
     Valide cv_data, calcule la pagination et renvoie les diagnostics.
 
   generate-cv-html --cv-data <file> [--output <file>]
-    Genere un HTML. Si --output est absent, ecrit dans un fichier temporaire.
+    Genere un HTML. Si --output est absent, ecrit dans CV_GENERATOR_OUTPUT_DIR
+    ou dans un fichier temporaire systeme.
 
   generate-cv-pdf --cv-data <file> [--pdf-mode paginated|continuous] [--output <file>]
     Genere un PDF headless (backend Vivliostyle). Si --output est absent,
-    ecrit dans un fichier temporaire.
+    ecrit dans CV_GENERATOR_OUTPUT_DIR ou dans un fichier temporaire systeme.
     Par defaut: --pdf-mode paginated.
 
 Options communes:
@@ -91,6 +101,9 @@ Depannage LM Studio / petits LLM:
     4) generate-cv-pdf --cv-data cv.json
   - L'option --cv-data evite d'envoyer tout le CV dans les arguments du tool call.
   - En sortie, utilisez toujours file_path pour recuperer le fichier genere.
+  - Pour une photo locale, utilisez header.photoPath plutot que photoUrl et configurez
+    CV_GENERATOR_ALLOWED_ASSET_DIR si l'image est hors du repertoire courant.
+  - Pour choisir le dossier de sortie par defaut, configurez CV_GENERATOR_OUTPUT_DIR.
 `.trim();
 
 const COMMAND_HELP: Record<CommandName, string> = {
@@ -194,15 +207,54 @@ const getOption = (args: ParsedArgs, names: string[]): string | undefined => {
 const hasFlag = (args: ParsedArgs, names: string[]): boolean =>
   names.some((name) => args.options.has(name));
 
-const readJsonFile = async (filePath: string): Promise<unknown> => {
-  const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
-  const raw = await readFile(absolutePath, "utf8");
-  return JSON.parse(raw) as unknown;
+const parseJsonErrorLocation = (message: string): { position?: number; line?: number; column?: number } => {
+  const positionMatch = message.match(/position\s+(\d+)/i);
+  const lineColumnMatch = message.match(/line\s+(\d+)\s+column\s+(\d+)/i);
+
+  return {
+    position: positionMatch ? Number(positionMatch[1]) : undefined,
+    line: lineColumnMatch ? Number(lineColumnMatch[1]) : undefined,
+    column: lineColumnMatch ? Number(lineColumnMatch[2]) : undefined,
+  };
 };
 
-const ensureOutputDir = async (): Promise<string> => {
-  await mkdir(TEMP_OUTPUT_DIR, { recursive: true });
-  return TEMP_OUTPUT_DIR;
+const readJsonFile = async (filePath: string): Promise<unknown> => {
+  const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
+  let raw: string;
+
+  try {
+    raw = await readFile(absolutePath, "utf8");
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+    throw new CliError(
+      nodeError.code === "ENOENT" ? "cv_data_file_not_found" : "cv_data_file_read_failed",
+      nodeError.code === "ENOENT"
+        ? `Fichier cv_data introuvable: ${absolutePath}`
+        : `Impossible de lire le fichier cv_data: ${absolutePath}`,
+      {
+        cv_data_path: filePath,
+        absolute_path: absolutePath,
+        fs_error_code: nodeError.code,
+      },
+    );
+  }
+
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "JSON invalide.";
+    throw new CliError(
+      "invalid_cv_data_json",
+      `Le fichier cv_data n'est pas un JSON valide: ${absolutePath}`,
+      {
+        cv_data_path: filePath,
+        absolute_path: absolutePath,
+        parse_error: message,
+        ...parseJsonErrorLocation(message),
+        hint: "Corrigez la syntaxe JSON: guillemets doubles obligatoires, pas de virgule finale, accolades/crochets equilibres.",
+      },
+    );
+  }
 };
 
 const writeTextArtifact = async (
@@ -210,11 +262,13 @@ const writeTextArtifact = async (
   fileName: string,
   explicitOutput?: string,
 ): Promise<string> => {
-  const outputPath = explicitOutput
-    ? path.isAbsolute(explicitOutput)
-      ? explicitOutput
-      : path.resolve(process.cwd(), explicitOutput)
-    : path.join(await ensureOutputDir(), `${path.basename(fileName, path.extname(fileName))}-${Date.now()}${path.extname(fileName)}`);
+  if (!explicitOutput) {
+    return writeTextArtifactToOutputFile(fileName, content);
+  }
+
+  const outputPath = path.isAbsolute(explicitOutput)
+    ? explicitOutput
+    : path.resolve(process.cwd(), explicitOutput);
   await writeFile(outputPath, content, "utf8");
   return outputPath;
 };
@@ -249,6 +303,33 @@ const printError = (message: string, code = "cli_error", details: Record<string,
   process.exit(1);
   throw new Error("CLI exited");
 };
+
+const printPageLimitExceeded = (
+  pageCount: number,
+  issues: unknown[],
+  structureMessages: string[],
+  context: { command: "generate-cv-html" | "generate-cv-pdf"; pdfMode?: PdfMode },
+): never =>
+  printError("Le rendu depasse la limite de pages fixee dans cv_data.render.maxPages.", "page_limit_exceeded", {
+    page_count: pageCount,
+    page_limit_exceeded: true,
+    issues,
+    structure_messages: structureMessages,
+    max_pages_source: "cv_data.render.maxPages",
+    next_actions:
+      context.command === "generate-cv-pdf"
+        ? [
+            "reduire le contenu ou passer render.templateStyle a compact ou ultra-compact",
+            "augmenter ou retirer cv_data.render.maxPages",
+            "generer en --pdf-mode continuous si vous voulez ignorer la limite pour le PDF",
+          ]
+        : [
+            "reduire le contenu ou passer render.templateStyle a compact ou ultra-compact",
+            "augmenter ou retirer cv_data.render.maxPages",
+            "pour inspecter le HTML malgre tout, retirez temporairement render.maxPages",
+          ],
+    pdf_mode: context.pdfMode,
+  });
 
 const assertCommand = (command: string | undefined): CommandName => {
   if (!command) {
@@ -326,11 +407,8 @@ const runGenerateCvHtml = async (args: ParsedArgs): Promise<void> => {
   });
 
   if (validation.pageLimitExceeded) {
-    printError("Le rendu depasse la limite de pages fixee.", "page_limit_exceeded", {
-      page_count: validation.pageCount,
-      page_limit_exceeded: true,
-      issues: validation.issues,
-      structure_messages: validation.structureMessages,
+    printPageLimitExceeded(validation.pageCount, validation.issues, validation.structureMessages, {
+      command: "generate-cv-html",
     });
   }
 
@@ -369,11 +447,9 @@ const runGenerateCvPdf = async (args: ParsedArgs): Promise<void> => {
   });
 
   if (pdfMode === "paginated" && validation.pageLimitExceeded) {
-    printError("Le rendu depasse la limite de pages fixee.", "page_limit_exceeded", {
-      page_count: validation.pageCount,
-      page_limit_exceeded: true,
-      issues: validation.issues,
-      structure_messages: validation.structureMessages,
+    printPageLimitExceeded(validation.pageCount, validation.issues, validation.structureMessages, {
+      command: "generate-cv-pdf",
+      pdfMode,
     });
   }
 
@@ -445,6 +521,23 @@ const run = async (): Promise<void> => {
 };
 
 run().catch((error) => {
+  if (error instanceof CliError) {
+    printError(error.message, error.code, error.details);
+  }
+
+  const maybeStructuredError = error as { code?: unknown; details?: unknown };
+  if (typeof maybeStructuredError.code === "string") {
+    printError(
+      error instanceof Error ? error.message : "Erreur interne CLI.",
+      maybeStructuredError.code,
+      maybeStructuredError.details &&
+        typeof maybeStructuredError.details === "object" &&
+        !Array.isArray(maybeStructuredError.details)
+        ? (maybeStructuredError.details as Record<string, unknown>)
+        : {},
+    );
+  }
+
   const message = error instanceof Error ? error.message : "Erreur interne CLI.";
   printError(message, "internal_error");
 });
