@@ -47,6 +47,17 @@ const appendChunkInputSchema = z.object({
 
 type OutputFormat = "pdf" | "html";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = path.resolve(__dirname, "..", "..");
+const SKILL_DIR = path.join(PROJECT_ROOT, "skills", "cv-generator");
+const SKILL_FILE_PATH = path.join(SKILL_DIR, "SKILL.md");
+const SKILL_CONTRACT_PATH = path.join(SKILL_DIR, "references", "cv-contract.md");
+const SKILL_AGENT_CONFIG_PATH = path.join(SKILL_DIR, "agents", "openai.yaml");
+
+const SKILL_RESOURCE_URI = "cv-generator://skills/cv-generator/SKILL.md";
+const SKILL_CONTRACT_RESOURCE_URI = "cv-generator://skills/cv-generator/references/cv-contract.md";
+const SKILL_AGENT_CONFIG_RESOURCE_URI = "cv-generator://skills/cv-generator/agents/openai.yaml";
+
 interface ChunkUploadSession {
   id: string;
   outputFormat: OutputFormat;
@@ -544,8 +555,96 @@ const generatePdfFromCvData = async (
 export const createCvMcpServer = (): McpServer => {
   const server = new McpServer({
     name: "cv-generator-mcp",
-    version: "0.1.4",
+    version: "0.1.5",
   });
+
+  server.registerResource(
+    "cv-generator-skill",
+    SKILL_RESOURCE_URI,
+    {
+      title: "CV Generator Skill",
+      description:
+        "Instructions agent pour utiliser correctement le serveur MCP cv-generator: cv_data_path, photoPath, validation et generation HTML/PDF.",
+      mimeType: "text/markdown",
+    },
+    async (uri) => ({
+      contents: [
+        {
+          uri: uri.href,
+          text: await readFile(SKILL_FILE_PATH, "utf-8"),
+          mimeType: "text/markdown",
+        },
+      ],
+    }),
+  );
+
+  server.registerResource(
+    "cv-generator-contract-reference",
+    SKILL_CONTRACT_RESOURCE_URI,
+    {
+      title: "CV Generator Contract Reference",
+      description:
+        "Reference agent du contrat CvData et des workflows MCP locaux, en complement du JSON Schema retourne par get_cv_schema.",
+      mimeType: "text/markdown",
+    },
+    async (uri) => ({
+      contents: [
+        {
+          uri: uri.href,
+          text: await readFile(SKILL_CONTRACT_PATH, "utf-8"),
+          mimeType: "text/markdown",
+        },
+      ],
+    }),
+  );
+
+  server.registerResource(
+    "cv-generator-openai-agent-config",
+    SKILL_AGENT_CONFIG_RESOURCE_URI,
+    {
+      title: "CV Generator OpenAI Agent Config",
+      description: "Configuration indicative pour agents OpenAI consommant le MCP cv-generator.",
+      mimeType: "text/yaml",
+    },
+    async (uri) => ({
+      contents: [
+        {
+          uri: uri.href,
+          text: await readFile(SKILL_AGENT_CONFIG_PATH, "utf-8"),
+          mimeType: "text/yaml",
+        },
+      ],
+    }),
+  );
+
+  server.registerPrompt(
+    "cv_generator_workflow",
+    {
+      title: "CV Generator Workflow",
+      description:
+        "Guide court pour charger les resources de skill et utiliser le workflow MCP recommande.",
+    },
+    async () => ({
+      description: "Workflow recommande pour le MCP cv-generator.",
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: [
+              "Utilise le MCP cv-generator avec ce workflow:",
+              `1. Lis la resource ${SKILL_RESOURCE_URI} pour les instructions agent.`,
+              `2. Lis ${SKILL_CONTRACT_RESOURCE_URI} si tu dois manipuler le contrat CvData.`,
+              "3. Appelle get_cv_schema pour le JSON Schema machine-readable.",
+              "4. Prefere cv_data_path pour les gros JSON locaux et header.photoPath pour les photos locales.",
+              "5. Valide avec validate_cv avant generate_cv_html ou generate_cv_pdf.",
+              "6. Quand generate_cv_pdf retourne file_path, relaie explicitement ce chemin a l'utilisateur.",
+            ].join("\n"),
+          },
+        },
+      ],
+    }),
+  );
 
   server.registerTool(
     "generate_cv_html",

@@ -597,6 +597,18 @@ Client compatibility:
 - the schema remains available in `structuredContent.schema`
 - a text copy of the schema is also returned in `content` for MCP clients that do not expose `structuredContent` to the model
 
+## Exposed Resources And Prompts
+
+The npm package exposes its agent-facing skill bundle as MCP resources:
+
+- `cv-generator://skills/cv-generator/SKILL.md`
+- `cv-generator://skills/cv-generator/references/cv-contract.md`
+- `cv-generator://skills/cv-generator/agents/openai.yaml`
+
+This lets compatible MCP clients retrieve operating instructions without requiring a separate local skill installation.
+
+The server also exposes the prompt `cv_generator_workflow`, which points clients to the resources and summarizes the recommended `get_cv_schema -> validate_cv -> generate_cv_pdf/html` workflow.
+
 ### `validate_cv`
 
 Normalizes and validates a `CvData`, then returns:
@@ -801,6 +813,7 @@ This skill:
 - does not replace MCP
 - documents the recommended workflow (`schema -> validate -> generate`)
 - helps clients such as Hermes and Claude Code use the public tools correctly
+- is exposed through MCP resources for clients that can retrieve resource content
 
 ## Main Files
 
@@ -819,6 +832,8 @@ These scripts are used to:
 
 - copy the skill into a local Hermes or Claude Code skill directory
 - print the MCP configuration snippet to copy and paste
+
+When the MCP client supports resources, local skill installation is optional because the same files are available through `cv-generator://skills/cv-generator/...` resource URIs.
 
 ---
 

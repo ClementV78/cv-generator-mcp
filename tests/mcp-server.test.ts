@@ -45,6 +45,31 @@ test("MCP server exposes the expected tools and serves schema/html generation", 
     assert(toolNames.includes("start_cv_chunked_generation"));
     assert(toolNames.includes("append_cv_generation_chunk"));
 
+    const resources = await client.listResources();
+    const resourceUris = resources.resources.map((resource) => resource.uri);
+    assert(resourceUris.includes("cv-generator://skills/cv-generator/SKILL.md"));
+    assert(resourceUris.includes("cv-generator://skills/cv-generator/references/cv-contract.md"));
+    assert(resourceUris.includes("cv-generator://skills/cv-generator/agents/openai.yaml"));
+
+    const skillResource = await client.readResource({
+      uri: "cv-generator://skills/cv-generator/SKILL.md",
+    });
+    const skillText = (skillResource.contents[0] as { text?: string } | undefined)?.text ?? "";
+    assert.match(skillText, /# CV Generator/);
+    assert.match(skillText, /cv_data_path/);
+
+    const prompts = await client.listPrompts();
+    assert(prompts.prompts.some((prompt) => prompt.name === "cv_generator_workflow"));
+
+    const workflowPrompt = await client.getPrompt({
+      name: "cv_generator_workflow",
+      arguments: {},
+    });
+    const workflowText =
+      (workflowPrompt.messages[0]?.content as { text?: string } | undefined)?.text ?? "";
+    assert.match(workflowText, /cv_data_path/);
+    assert.match(workflowText, /photoPath/);
+
     const schemaResult = await client.callTool({
       name: "get_cv_schema",
       arguments: {},
@@ -120,6 +145,13 @@ test("launcher bin starts the MCP server without npm script noise", async () => 
     assert(toolNames.includes("generate_cv_pdf"));
     assert(toolNames.includes("validate_cv"));
     assert(toolNames.includes("get_cv_schema"));
+
+    const resources = await client.listResources();
+    assert(
+      resources.resources.some(
+        (resource) => resource.uri === "cv-generator://skills/cv-generator/SKILL.md",
+      ),
+    );
   } finally {
     await client.close();
   }

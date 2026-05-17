@@ -185,7 +185,7 @@ claude mcp add cv-generator `
   -e CV_GENERATOR_ALLOWED_INPUT_DIR="C:\Users\xclem\cv-inputs" `
   -e CV_GENERATOR_ALLOWED_ASSET_DIR="C:\Users\xclem\cv-assets" `
   -e CV_GENERATOR_OUTPUT_DIR="C:\Users\xclem\cv-output" `
-  -- npx.cmd -y @xclem/cv-generator-mcp@0.1.4
+  -- npx.cmd -y @xclem/cv-generator-mcp@0.1.5
 ```
 
 ### Claude Code MCP config on macOS / Linux
@@ -195,7 +195,7 @@ claude mcp add cv-generator \
   -e CV_GENERATOR_ALLOWED_INPUT_DIR="$HOME/cv-inputs" \
   -e CV_GENERATOR_ALLOWED_ASSET_DIR="$HOME/cv-assets" \
   -e CV_GENERATOR_OUTPUT_DIR="$HOME/cv-output" \
-  -- npx -y @xclem/cv-generator-mcp@0.1.4
+  -- npx -y @xclem/cv-generator-mcp@0.1.5
 ```
 
 ### Repo-shipped skill
@@ -443,6 +443,18 @@ MCP client compatibility:
 
 - the complete schema is returned in `structuredContent.schema`
 - a text copy is also duplicated in `content[].text` for clients that do not expose `structuredContent` to the model
+
+## MCP resources and prompts
+
+The package-shipped skill bundle is exposed as MCP resources, not as a tool:
+
+- `cv-generator://skills/cv-generator/SKILL.md`
+- `cv-generator://skills/cv-generator/references/cv-contract.md`
+- `cv-generator://skills/cv-generator/agents/openai.yaml`
+
+Clients that support MCP resources can read these files to learn the recommended workflow without requiring a separate local skill installation. The bundle emphasizes `cv_data_path`, `header.photoPath`, validation before generation, and relaying generated `file_path` values.
+
+The server also exposes the prompt `cv_generator_workflow`, which gives compatible clients a short checklist for using the resources and tools together.
 
 ### `validate_cv`
 
