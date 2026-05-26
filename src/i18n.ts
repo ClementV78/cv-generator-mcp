@@ -21,6 +21,8 @@ export interface CvLanguageCopy {
   labelBulletPoint: string;
   labelCompany: string;
   labelBadgeText: string;
+  labelResidence: string;
+  labelNationality: string;
   labelLocation: string;
   labelAvailability: string;
   labelQrCode: string;
@@ -88,6 +90,8 @@ const ENGLISH_COPY: CvLanguageCopy = {
   labelBulletPoint: "Bullet point",
   labelCompany: "Company",
   labelBadgeText: "Badge text",
+  labelResidence: "Residence",
+  labelNationality: "Nationality",
   labelLocation: "Location",
   labelAvailability: "Availability",
   labelQrCode: "QR label",
@@ -156,6 +160,8 @@ const FRENCH_COPY: CvLanguageCopy = {
   labelBulletPoint: "Point",
   labelCompany: "Entreprise",
   labelBadgeText: "Texte du badge",
+  labelResidence: "Lieu de residence",
+  labelNationality: "Nationalite",
   labelLocation: "Localisation",
   labelAvailability: "Disponibilité",
   labelQrCode: "Libellé QR",
@@ -224,6 +230,8 @@ const SPANISH_COPY: CvLanguageCopy = {
   labelBulletPoint: "Viñeta",
   labelCompany: "Empresa",
   labelBadgeText: "Texto del distintivo",
+  labelResidence: "Residencia",
+  labelNationality: "Nacionalidad",
   labelLocation: "Ubicación",
   labelAvailability: "Disponibilidad",
   labelQrCode: "Etiqueta QR",

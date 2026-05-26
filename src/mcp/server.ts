@@ -80,6 +80,8 @@ const compactCvDataExample = {
     showPhoto: false,
     photoZoom: 100,
     headline: "ARCHITECTE CLOUD SENIOR | AWS | AZURE | KUBERNETES",
+    residence: "Paris, France",
+    nationality: "FR 🇫🇷",
     location: "Paris, France",
     email: "thomas.dubois@email.com",
     phone: "+33 6 12 34 56 78",

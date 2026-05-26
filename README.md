@@ -357,6 +357,8 @@ The MCP client sends:
       "showPhoto": false,
       "photoZoom": 100,
       "headline": "DEVOPS | CLOUD | AUTOMATION",
+      "residence": "Paris, France",
+      "nationality": "FR 🇫🇷",
       "location": "Paris, France",
       "email": "alex.martin@example.com",
       "phone": "+33 6 12 34 56 78",

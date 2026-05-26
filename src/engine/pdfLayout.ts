@@ -218,7 +218,9 @@ const measureLayout = async (data: CvData, mode: PdfMode): Promise<{ metrics: Pd
   const sidebar = new Flow(mode, contentHeight);
   sidebar.reserve(92);
   for (const value of [
-    data.header.location,
+    data.header.residence,
+    data.header.nationality,
+    !data.header.residence.trim() ? data.header.location : "",
     data.header.email,
     data.header.phone,
     data.header.linkedin,
@@ -528,7 +530,9 @@ export const renderCvPdfWithEmbeddedLibrary = async (data: CvData, mode: PdfMode
   sidebar.gap(12);
 
   for (const text of [
-    data.header.location,
+    data.header.residence,
+    data.header.nationality,
+    !data.header.residence.trim() ? data.header.location : "",
     data.header.email,
     data.header.phone,
     data.header.linkedin,

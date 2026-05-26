@@ -246,12 +246,18 @@ const renderSidebarCard = (
   path: string,
   index: number,
   interactive: boolean,
+  templateStyle: TemplateStyle,
   titleLines: number,
   titleLabel: string,
   secondaryLabel: string,
   metadataLabel: string,
   activeCardIconMenu?: string | null,
-): string => `
+) : string => {
+  const isUltraCompact = templateStyle === "ultra-compact";
+  const useSubtitleAsPrefix = isUltraCompact && path === "certifications" && item.subtitle.trim().length > 0;
+  const useMetaAsPrefix = isUltraCompact && path === "formations" && Boolean(item.meta?.trim());
+
+  return `
   <div class="sidebar-card">
     <div class="card-icon card-icon-picker">
       ${
@@ -290,17 +296,49 @@ const renderSidebarCard = (
       }
     </div>
     <div class="card-content">
-      ${renderEditableText(item.title, `${path}.${index}.title`, interactive, titleLines, titleLabel)}
-      ${renderEditableText(
-        item.subtitle,
-        `${path}.${index}.subtitle`,
-        interactive,
-        LIMITS.certificationMetaLines,
-        secondaryLabel,
-        "card-meta",
-      )}
+      <div class="card-title-line">
+        ${
+          useSubtitleAsPrefix
+            ? renderEditableText(
+                item.subtitle,
+                `${path}.${index}.subtitle`,
+                interactive,
+                LIMITS.certificationMetaLines,
+                secondaryLabel,
+                "card-prefix",
+              )
+            : ""
+        }
+        ${
+          useMetaAsPrefix && item.meta
+            ? renderEditableText(
+                item.meta,
+                `${path}.${index}.meta`,
+                interactive,
+                1,
+                metadataLabel,
+                "card-prefix",
+              )
+            : ""
+        }
+        ${renderEditableText(item.title, `${path}.${index}.title`, interactive, titleLines, titleLabel, "card-title")}
+      </div>
       ${
-        item.meta ? renderEditableText(item.meta, `${path}.${index}.meta`, interactive, 1, metadataLabel, "card-meta soft") : ""
+        useSubtitleAsPrefix
+          ? ""
+          : renderEditableText(
+              item.subtitle,
+              `${path}.${index}.subtitle`,
+              interactive,
+              LIMITS.certificationMetaLines,
+              secondaryLabel,
+              "card-meta",
+            )
+      }
+      ${
+        item.meta && !useMetaAsPrefix
+          ? renderEditableText(item.meta, `${path}.${index}.meta`, interactive, 1, metadataLabel, "card-meta soft")
+          : ""
       }
     </div>
     <div class="card-controls ${controlClass(interactive)}">
@@ -308,6 +346,7 @@ const renderSidebarCard = (
     </div>
   </div>
 `;
+};
 
 const renderLanguageCard = (
   item: LanguageCard,
@@ -366,6 +405,15 @@ const renderExperience = (
   const experiencePath = `experiences.${index}`;
   const bulletsPath = `${experiencePath}.bullets`;
   const projectsPath = `${experiencePath}.projects`;
+  const isUltraCompact = state.render.templateStyle === "ultra-compact";
+  const periodMarkup = renderEditableText(
+    experience.period,
+    `${experiencePath}.period`,
+    interactive,
+    1,
+    copy.labelPeriod,
+    "experience-period",
+  );
 
   return `
     <article class="experience-item">
@@ -373,10 +421,11 @@ const renderExperience = (
       <div class="experience-card">
         <div class="experience-header">
           <div class="experience-title-line">
+            ${isUltraCompact ? periodMarkup : ""}
             ${renderEditableText(experience.role, `${experiencePath}.role`, interactive, undefined, undefined, "experience-role")}
             ${renderEditableText(experience.company, `${experiencePath}.company`, interactive, 1, copy.labelCompany, "experience-company")}
           </div>
-          ${renderEditableText(experience.period, `${experiencePath}.period`, interactive, 1, copy.labelPeriod, "experience-period")}
+          ${isUltraCompact ? "" : periodMarkup}
           ${renderToolbarButtons("experiences", index, interactive)}
         </div>
         ${renderOptionalEditableText(
@@ -602,9 +651,11 @@ const renderUltraCompactSheet = (
   const copy = getCvLanguageCopy(state.render.language);
   const canAddSkillGroups = canAddFactory(state, "skillGroups", "skill-bar-group");
   const contactItems = [
+    state.header.residence,
+    state.header.nationality,
+    !state.header.residence.trim() ? state.header.location : "",
     state.header.phone,
     state.header.email,
-    state.header.location,
     state.header.linkedin,
     state.header.github,
   ].filter((value) => value.trim().length > 0);
@@ -694,6 +745,7 @@ const renderUltraCompactSheet = (
                     "certifications",
                     index,
                     interactive,
+                    state.render.templateStyle,
                     LIMITS.certificationTitleLines,
                     copy.sectionCertifications,
                     copy.labelSecondary,
@@ -714,6 +766,7 @@ const renderUltraCompactSheet = (
                     "formations",
                     index,
                     interactive,
+                    state.render.templateStyle,
                     2,
                     copy.sectionFormations,
                     copy.labelSecondary,
@@ -797,7 +850,9 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
             }
 
           <section class="contact-list">
-            ${interactive || state.header.location.trim() ? renderEditableText(state.header.location, "header.location", interactive, 2, copy.labelLocation, "contact-item") : ""}
+            ${interactive || state.header.residence.trim() ? renderEditableText(state.header.residence, "header.residence", interactive, 2, copy.labelResidence, "contact-item") : ""}
+            ${interactive || state.header.nationality.trim() ? renderEditableText(state.header.nationality, "header.nationality", interactive, 2, copy.labelNationality, "contact-item") : ""}
+            ${!state.header.residence.trim() && (interactive || state.header.location.trim()) ? renderEditableText(state.header.location, "header.location", interactive, 2, copy.labelLocation, "contact-item") : ""}
             ${interactive || state.header.email.trim() ? renderEditableText(state.header.email, "header.email", interactive, 2, "Email", "contact-item") : ""}
             ${interactive || state.header.phone.trim() ? renderEditableText(state.header.phone, "header.phone", interactive, 2, "Telephone", "contact-item") : ""}
             ${interactive || state.header.linkedin.trim() ? renderEditableText(state.header.linkedin, "header.linkedin", interactive, 2, "LinkedIn", "contact-item") : ""}
@@ -900,6 +955,7 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
                     "certifications",
                     index,
                     interactive,
+                    state.render.templateStyle,
                     LIMITS.certificationTitleLines,
                     copy.sectionCertifications,
                     copy.labelSecondary,
@@ -921,6 +977,7 @@ export const renderCvSheet = (state: CvData, options: RenderCvSheetOptions): str
                     "formations",
                     index,
                     interactive,
+                    state.render.templateStyle,
                     2,
                     copy.sectionFormations,
                     copy.labelSecondary,

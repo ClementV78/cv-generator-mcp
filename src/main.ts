@@ -179,8 +179,15 @@ const getPreferredEnvironmentLabel = (state: CvData): string =>
   state.experiences.find((experience) => experience.techEnvironmentLabel.trim())?.techEnvironmentLabel ??
   getCvLanguageCopy(state.render.language).defaults.techEnvironmentLabel;
 
+const updateDocumentTitle = (state: CvData): void => {
+  const copy = getCvLanguageCopy(state.render.language);
+  const cvName = state.header.name.trim();
+  document.title = cvName ? `${cvName} - ${copy.documentTitleSuffix}` : copy.documentTitleSuffix;
+};
+
 const rerender = (state: CvData): void => {
   currentValidation = measurePreviewValidation(state);
+  updateDocumentTitle(state);
 
   app.innerHTML = renderApp(state, {
     interactive: true,

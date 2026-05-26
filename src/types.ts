@@ -24,6 +24,8 @@ export interface HeaderData {
   showPhoto: boolean;
   photoZoom: number;
   headline: string;
+  residence: string;
+  nationality: string;
   location: string;
   email: string;
   phone: string;

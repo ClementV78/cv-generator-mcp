@@ -1250,11 +1250,11 @@ input {
 
 .template-ultra-compact .ultra-hero {
   position: relative;
-  min-height: 64px;
-  padding-left: 78px;
-  padding-right: 78px;
+  min-height: 60px;
+  padding-left: 74px;
+  padding-right: 74px;
   text-align: center;
-  margin-bottom: 11px;
+  margin-bottom: 8px;
 }
 
 .template-ultra-compact .ultra-photo {
@@ -1262,31 +1262,31 @@ input {
   top: 0;
   left: 0;
   margin: 0;
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
 }
 
 .template-ultra-compact .hero-name {
   color: var(--navy);
-  font-size: 1.92rem;
+  font-size: 1.82rem;
   line-height: 1;
 }
 
 .template-ultra-compact .hero-headline {
-  margin-top: 4px;
+  margin-top: 3px;
   color: var(--ui-accent);
-  font-size: 0.9rem;
-  line-height: 1.1;
+  font-size: 0.84rem;
+  line-height: 1.04;
 }
 
 .ultra-contact-line {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 5px;
-  margin-top: 5px;
+  gap: 4px;
+  margin-top: 4px;
   color: var(--main-text-color);
-  font-size: 0.73rem;
+  font-size: 0.7rem;
   font-weight: 700;
 }
 
@@ -1340,27 +1340,27 @@ input {
 .template-ultra-compact .skill-section > .section-heading {
   justify-content: flex-start;
   border-bottom: 0;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .template-ultra-compact .skill-section > .section-heading .editable-text {
   color: var(--main-heading-color);
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   text-align: left;
 }
 
 .template-ultra-compact .skill-group-body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 5px 10px;
+  gap: 3px 8px;
 }
 
 .template-ultra-compact .skill-row {
   display: grid;
-  grid-template-columns: minmax(82px, max-content) 46px;
+  grid-template-columns: minmax(78px, max-content) 42px;
   align-items: center;
   justify-content: start;
-  gap: 6px;
+  gap: 4px;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -1371,8 +1371,8 @@ input {
   display: block;
   margin: 0;
   color: var(--main-text-color);
-  font-size: 0.72rem;
-  line-height: 1.1;
+  font-size: 0.7rem;
+  line-height: 1.02;
 }
 
 .template-ultra-compact .skill-level-value {
@@ -1380,26 +1380,40 @@ input {
 }
 
 .template-ultra-compact .skill-track {
-  height: 4px;
+  height: 3px;
   gap: 1px;
+}
+
+.template-ultra-compact .skill-track span {
+  border: 1px solid color-mix(in srgb, var(--main-heading-color) 22%, white);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.template-ultra-compact .skill-track span.is-filled {
+  border-color: color-mix(in srgb, var(--progress-accent) 70%, white);
+  background: linear-gradient(
+    90deg,
+    var(--progress-accent),
+    color-mix(in srgb, var(--progress-accent) 72%, white)
+  );
 }
 
 .template-ultra-compact .tag-cloud {
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
-  gap: 4px 5px;
+  gap: 3px 4px;
 }
 
 .template-ultra-compact .tag-pill {
   justify-content: center;
   min-width: 0;
-  padding: 2px 5px;
+  padding: 1px 5px;
   border-radius: 999px;
   color: var(--main-text-color);
   background: color-mix(in srgb, var(--ui-accent) 8%, white);
-  font-size: 0.68rem;
-  line-height: 1.1;
+  font-size: 0.66rem;
+  line-height: 1.05;
 }
 
 .highlight-card,
@@ -1942,6 +1956,10 @@ input {
   display: block;
 }
 
+.template-ultra-compact .experience-title-line {
+  gap: 4px 8px;
+}
+
 .template-ultra-compact .experience-role {
   color: var(--main-heading-color);
   font-size: 0.78rem;
@@ -1949,7 +1967,7 @@ input {
 }
 
 .template-ultra-compact .experience-company {
-  display: block;
+  flex-basis: 100%;
   margin-left: 0;
   color: var(--main-text-color);
   font-size: 0.72rem;
@@ -1958,9 +1976,9 @@ input {
 
 .template-ultra-compact .experience-period,
 .template-ultra-compact .project-period {
-  display: block;
+  display: inline;
   width: fit-content;
-  margin-top: 1px;
+  margin-top: 0;
   padding: 0;
   border: 0;
   background: transparent;
@@ -2033,11 +2051,11 @@ input {
 .template-ultra-compact .ultra-bottom-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 10px;
 }
 
 .template-ultra-compact .stacked-list {
-  gap: 5px;
+  gap: 3px;
 }
 
 .template-ultra-compact .sidebar-card,
@@ -2052,7 +2070,7 @@ input {
   background: transparent;
   color: var(--main-text-color);
   font-size: 0.7rem;
-  line-height: 1.14;
+  line-height: 1.08;
 }
 
 .mode-edit .template-ultra-compact .sidebar-card {
@@ -2080,9 +2098,34 @@ input {
   font-weight: 900;
 }
 
+.template-ultra-compact .card-title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+}
+
+.template-ultra-compact .card-title-line > .editable-text {
+  display: inline-block;
+  width: auto;
+}
+
+.template-ultra-compact .card-prefix {
+  color: color-mix(in srgb, var(--main-heading-color) 72%, white);
+  font-size: 0.66rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.template-ultra-compact .card-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .template-ultra-compact .card-meta {
   color: var(--main-text-color);
   font-size: 0.68rem;
+  margin-top: 2px;
 }
 
 .main-education-placeholder {
@@ -2553,29 +2596,29 @@ input {
   }
 
   .cv-sheet.template-ultra-compact .hero-name {
-    font-size: 20pt;
+    font-size: 18.7pt;
   }
 
   .cv-sheet.template-ultra-compact .ultra-hero {
-    min-height: 14mm;
-    padding-left: 18mm;
-    padding-right: 18mm;
-    margin-bottom: 3mm;
+    min-height: 13mm;
+    padding-left: 16.8mm;
+    padding-right: 16.8mm;
+    margin-bottom: 2.2mm;
   }
 
   .cv-sheet.template-ultra-compact .ultra-photo {
-    width: 14mm;
-    height: 14mm;
+    width: 13mm;
+    height: 13mm;
   }
 
   .cv-sheet.template-ultra-compact .hero-headline {
-    margin-top: 3px;
-    font-size: 9.2pt;
+    margin-top: 2px;
+    font-size: 8.6pt;
   }
 
   .cv-sheet.template-ultra-compact .ultra-contact-line {
-    margin-top: 5px;
-    font-size: 7.5pt;
+    margin-top: 3px;
+    font-size: 7.1pt;
   }
 
   .cv-sheet.template-ultra-compact .section-heading h2,
@@ -2629,7 +2672,19 @@ input {
   .cv-sheet.template-ultra-compact .language-card,
   .cv-sheet.template-ultra-compact .highlight-card {
     font-size: 6.8pt;
-    line-height: 1.1;
+    line-height: 1.04;
+  }
+
+  .cv-sheet.template-ultra-compact .ultra-bottom-grid {
+    gap: 8px;
+  }
+
+  .cv-sheet.template-ultra-compact .stacked-list {
+    gap: 2px;
+  }
+
+  .cv-sheet.template-ultra-compact .card-meta {
+    margin-top: 1px;
   }
 
   .editable-text {
